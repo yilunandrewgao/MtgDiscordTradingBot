@@ -1,0 +1,4 @@
+urllib3<2.0
+requests
+discord.py
+python-dotenv

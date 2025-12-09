@@ -1,0 +1,10 @@
+{
+    "users": {
+        "123": {
+            "echomtg_auth": "abc"
+        },
+        "1234": {
+            "echomtg_auth": "abcd"
+        }
+    }
+}
