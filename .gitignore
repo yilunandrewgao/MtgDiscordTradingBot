@@ -5,3 +5,5 @@ src/moxfield/collections
 venv/
 
 *.log
+
+.DS_Store
