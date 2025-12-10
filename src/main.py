@@ -6,6 +6,7 @@ import os
 import json
 
 from trade_manager import TradeManager
+from config import TRADER_ROLE, USERS_FILE
 
 load_dotenv()
 token = os.getenv('DISCORD_TOKEN')
@@ -15,78 +16,73 @@ intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
 
-trade_manager = TradeManager("users.json")
+# Check if users.json exists, create it if not
+if not os.path.exists(USERS_FILE):
+    with open(USERS_FILE, "w") as f:
+        json.dump({"users": {}}, f)
+
+trade_manager = TradeManager(USERS_FILE)
 
 
 bot = commands.Bot(command_prefix='!', intents=intents)
 
 @bot.event
 async def on_ready():
-    print(f"We are ready to go in, {bot.user.name}")
+
+    ## Create MtgTrader role if it does not already exist
+    for guild in bot.guilds:
+        if TRADER_ROLE not in [role.name for role in guild.roles]:
+            await guild.create_role(name=TRADER_ROLE)
+    
+    print(f"We are ready to go, {bot.user.name}")
 
 @bot.event
 async def on_member_join(member):
     await member.send(f"Welcome to the server, {member.name}")
 
-@bot.event
-async def on_message(message):
-    if message.author == bot.user:
-        return
-    
-    if "shit" in message.content.lower():
-        await message.delete()
-        await message.channel.send(f"{message.author.mention} - don't use that word")
-    
-    await bot.process_commands(message)
-
 @bot.command()
-async def hello(ctx):
-    await ctx.send(f"Hello {ctx.author.mention}!")
-
-@bot.command()
-async def assign(ctx):
-    role_name = ctx.message.content[ctx.message.content.find(' '):].strip()
-    role = discord.utils.get(ctx.guild.roles, name=role_name)
+async def start_trading(ctx):
+    role = discord.utils.get(ctx.guild.roles, name=TRADER_ROLE)
     if role:
         await ctx.author.add_roles(role)
-        await ctx.send(f"{ctx.author.mention} is now assigned to {role_name}")
+        await ctx.send(f"{ctx.author.mention} is now assigned to {TRADER_ROLE}")
     else:
         await ctx.send(f"role does not exist")
 
 @bot.command()
-async def unassign(ctx):
-    role_name = ctx.message.content[ctx.message.content.find(' '):].strip()
-    role = discord.utils.get(ctx.guild.roles, name=role_name)
+async def stop_trading(ctx):
+    role = discord.utils.get(ctx.guild.roles, name=TRADER_ROLE)
     if role:
         await ctx.author.remove_roles(role)
-        await ctx.send(f"{ctx.author.mention} is now unassigned to {role_name}")
+        await ctx.send(f"{ctx.author.mention} is now unassigned to {TRADER_ROLE}")
     else:
         await ctx.send(f"role does not exist")
 
 @bot.command()
-async def login(ctx):
-    auth_token = ctx.message.content[ctx.message.content.find(' ') + 1:]
+async def link_moxfield(ctx):
+    moxfield_id = ctx.message.content[ctx.message.content.find(' ') + 1:]
     discord_id = str(ctx.author.id)
     
     # Read users.json
     try:
-        with open('users.json', 'r') as f:
+        with open(USERS_FILE, 'r') as f:
             data = json.load(f)
+
+            # Check if user id exists, if not add them
+            if discord_id not in data.get("users"):
+
+                data.get("users")[discord_id]["moxfield_id"] = moxfield_id
+                trade_manager.add_trader(data.get("users")[discord_id])
+                
+                # Write back to users.json
+                with open(USERS_FILE, 'w') as f:
+                    json.dump(data, f, indent=4)
+                
+                await ctx.send(f"{ctx.author.mention} has been added with moxfield collection!")
+            else:
+                await ctx.send(f"{ctx.author.mention} already exists in the system!")
     except (FileNotFoundError, json.JSONDecodeError):
-        data = {"users": {}}
-    
-    # Check if user id exists, if not add them
-    if discord_id not in data.get("users", {}):
-        data.setdefault("users", {})[discord_id] = {"echomtg_auth": auth_token}
-        trade_manager.add_trader(discord_id, auth_token)
-        
-        # Write back to users.json
-        with open('users.json', 'w') as f:
-            json.dump(data, f, indent=4)
-        
-        await ctx.send(f"{ctx.author.mention} has been added with token!")
-    else:
-        await ctx.send(f"{ctx.author.mention} already exists in the system!")
+        await ctx.send(f"error occurred when adding moxfield collection id for user id: {discord_id}. check logs.")
 
 @bot.command()
 async def search(ctx):

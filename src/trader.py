@@ -12,13 +12,15 @@ class Trader:
     def __init__(
         self,
         discord_id,
-        echomtg_token
+        echomtg_token,
+        moxfield_id
     ):
         self.discord_id = discord_id
         self.echomtg_token = echomtg_token
+        self.moxfield_id = moxfield_id
 
         
-    def search_collection(self, card_name):
+    def search_echomtg_collection(self, card_name):
 
         # Call the Echo MTG API
         url = f"https://api.echomtg.com/api/inventory/search?name={card_name}"
@@ -58,3 +60,6 @@ class Trader:
         except requests.exceptions.RequestException as e:
             print(f"Error calling Echo MTG API: {e}")
             return {}
+        
+    def search_moxfield_api(self, card_name):
+        
