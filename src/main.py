@@ -86,8 +86,14 @@ async def link_moxfield(ctx):
 
 @bot.command()
 async def search(ctx):
-    active_discord_ids = [str(member.id) for member in ctx.guild.members if TRADER_ROLE in [role.name for role in member.roles]]
+
     card_name = ctx.message.content[ctx.message.content.find(' ') + 1:]
+    if len(card_name) < 5:
+        await ctx.send("please use a longer search query")
+        return
+
+    active_discord_ids = [str(member.id) for member in ctx.guild.members if TRADER_ROLE in [role.name for role in member.roles]]
+    
     available_trades = trade_manager.search_for_card(card_name, active_discord_ids)
 
     if not available_trades:
