@@ -1,13 +1,14 @@
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 import logging
 from dotenv import load_dotenv
 import os
 import json
 
 from trade_manager import TradeManager
-from config import TRADER_ROLE, USERS_FILE
+from config import MOXFIELD_REFRESH_HOURS, TRADER_ROLE, USERS_FILE
 from trader import Trader
+from moxfield.fetch_collections import fetch_all_collections
 
 load_dotenv()
 token = os.getenv('DISCORD_TOKEN')
@@ -21,6 +22,15 @@ trade_manager = TradeManager()
 
 bot = commands.Bot(command_prefix='!', intents=intents)
 
+@tasks.loop(hours=MOXFIELD_REFRESH_HOURS)
+async def update_collections():
+    """Update all moxfield collections on an interval"""
+    try:
+        fetch_all_collections()
+        print("Successfully updated all collections")
+    except Exception as e:
+        print(f"Failed to update collections: {e}")
+
 @bot.event
 async def on_ready():
 
@@ -28,6 +38,8 @@ async def on_ready():
     for guild in bot.guilds:
         if TRADER_ROLE not in [role.name for role in guild.roles]:
             await guild.create_role(name=TRADER_ROLE)
+
+    update_collections.start()
     
     print(f"We are ready to go, {bot.user.name}")
 

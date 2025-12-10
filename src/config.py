@@ -1,2 +1,3 @@
 TRADER_ROLE = "MtgTrader"
 USERS_FILE = "users.json"
+MOXFIELD_REFRESH_HOURS = 24
