@@ -1,4 +1,7 @@
 .env
 users.json
+src/moxfield/collections
+
 venv/
+
 *.log

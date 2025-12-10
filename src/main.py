@@ -6,6 +6,8 @@ import os
 import json
 
 from trade_manager import TradeManager
+from config import TRADER_ROLE, USERS_FILE
+from trader import Trader
 
 load_dotenv()
 token = os.getenv('DISCORD_TOKEN')
@@ -15,91 +17,83 @@ intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
 
-trade_manager = TradeManager("users.json")
-
+trade_manager = TradeManager()
 
 bot = commands.Bot(command_prefix='!', intents=intents)
 
 @bot.event
 async def on_ready():
-    print(f"We are ready to go in, {bot.user.name}")
+
+    ## Create MtgTrader role if it does not already exist
+    for guild in bot.guilds:
+        if TRADER_ROLE not in [role.name for role in guild.roles]:
+            await guild.create_role(name=TRADER_ROLE)
+    
+    print(f"We are ready to go, {bot.user.name}")
 
 @bot.event
 async def on_member_join(member):
     await member.send(f"Welcome to the server, {member.name}")
 
-@bot.event
-async def on_message(message):
-    if message.author == bot.user:
-        return
-    
-    if "shit" in message.content.lower():
-        await message.delete()
-        await message.channel.send(f"{message.author.mention} - don't use that word")
-    
-    await bot.process_commands(message)
-
 @bot.command()
-async def hello(ctx):
-    await ctx.send(f"Hello {ctx.author.mention}!")
-
-@bot.command()
-async def assign(ctx):
-    role_name = ctx.message.content[ctx.message.content.find(' '):].strip()
-    role = discord.utils.get(ctx.guild.roles, name=role_name)
+async def start_trading(ctx):
+    role = discord.utils.get(ctx.guild.roles, name=TRADER_ROLE)
     if role:
         await ctx.author.add_roles(role)
-        await ctx.send(f"{ctx.author.mention} is now assigned to {role_name}")
+        await ctx.send(f"{ctx.author.mention} is now assigned to {TRADER_ROLE}")
     else:
         await ctx.send(f"role does not exist")
 
 @bot.command()
-async def unassign(ctx):
-    role_name = ctx.message.content[ctx.message.content.find(' '):].strip()
-    role = discord.utils.get(ctx.guild.roles, name=role_name)
+async def stop_trading(ctx):
+    role = discord.utils.get(ctx.guild.roles, name=TRADER_ROLE)
     if role:
         await ctx.author.remove_roles(role)
-        await ctx.send(f"{ctx.author.mention} is now unassigned to {role_name}")
+        await ctx.send(f"{ctx.author.mention} is now unassigned to {TRADER_ROLE}")
     else:
         await ctx.send(f"role does not exist")
 
 @bot.command()
-async def login(ctx):
-    auth_token = ctx.message.content[ctx.message.content.find(' ') + 1:]
+async def link_moxfield(ctx):
+    moxfield_id = ctx.message.content[ctx.message.content.find(' ') + 1:]
     discord_id = str(ctx.author.id)
     
     # Read users.json
-    try:
-        with open('users.json', 'r') as f:
-            data = json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
-        data = {"users": {}}
-    
-    # Check if user id exists, if not add them
-    if discord_id not in data.get("users", {}):
-        data.setdefault("users", {})[discord_id] = {"echomtg_auth": auth_token}
-        trade_manager.add_trader(discord_id, auth_token)
+    if discord_id not in trade_manager.traders:
+        trade_manager.add_trader(
+            discord_id=discord_id, 
+            echomtg_token="", 
+            moxfield_id=moxfield_id
+        )
         
-        # Write back to users.json
-        with open('users.json', 'w') as f:
-            json.dump(data, f, indent=4)
-        
-        await ctx.send(f"{ctx.author.mention} has been added with token!")
     else:
-        await ctx.send(f"{ctx.author.mention} already exists in the system!")
+        trade_manager.get_trader(discord_id).moxfield_id = moxfield_id
+
+    trade_manager.save_trader_info(discord_id)
+    await ctx.send(f"{ctx.author.mention} has been added with moxfield collection!")
 
 @bot.command()
 async def search(ctx):
+    active_discord_ids = [str(member.id) for member in ctx.guild.members if TRADER_ROLE in [role.name for role in member.roles]]
     card_name = ctx.message.content[ctx.message.content.find(' ') + 1:]
-    available_trades = trade_manager.search_for_card(card_name)
+    available_trades = trade_manager.search_for_card(card_name, active_discord_ids)
+
+    if not available_trades:
+        await ctx.send("no cards found")
+        return
+
+    full_message = ""
 
     for discord_id in available_trades:
         discord_user = bot.get_user(int(discord_id))
-        await ctx.send(f"{discord_user.mention} has available trades: ")
+        full_message += f"\n{discord_user.mention} has available trades: \n"
         cards = available_trades[discord_id]
         for multiverse_id in cards:
             card = cards[multiverse_id]
-            await ctx.send(f"{card['count']} copies of {card['name']} from set: {card['expansion']}.")
+            full_message += f"{card['count']} copies of {card['name']} from set: {card['expansion']}.\n"
+
+    await ctx.send(full_message)
+    
 
 
 bot.run(token, log_handler=handler, log_level=logging.DEBUG)
