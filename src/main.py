@@ -24,12 +24,13 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 
 @tasks.loop(hours=MOXFIELD_REFRESH_HOURS)
 async def update_collections():
-    """Update all moxfield collections on an interval"""
-    try:
-        fetch_all_collections()
-        print("Successfully updated all collections")
-    except Exception as e:
-        print(f"Failed to update collections: {e}")
+    """Update all moxfield collections on an interval, skipping when bot starts"""
+    if update_collections.current_loop != 0:
+        try:
+            fetch_all_collections()
+            print("Successfully updated all collections")
+        except Exception as e:
+            print(f"Failed to update collections: {e}")
 
 @bot.event
 async def on_ready():
