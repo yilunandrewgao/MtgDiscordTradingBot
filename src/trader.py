@@ -64,13 +64,12 @@ class Trader:
             print(f"Error calling Echo MTG API: {e}")
             return {}
 
-    def search_moxfield(self, page, card_name):
+    def search_moxfield(self, card_name):
         url = f"https://api2.moxfield.com/v1/collections/search/{self.moxfield_id}"
 
         params = {
-            "pageNumber": page,
             "pageSize": 1000,
-            "name": card_name
+            "q": card_name
         }
 
         try:
@@ -87,28 +86,27 @@ class Trader:
 
             if not response.text:
                 logging.debug(f"Failed to call moxfield using collection id: {self.moxfield_id}")
-                data = {}
+                response = {}
             else:
-                data = response.json()
+                response = response.json()
 
             # Filter all_data
             grouped_items = {}
 
-            for entry in data:
+            for entry in response['data']:
                 card = entry.get("card", {})
-                if self.loose_match(card.get("name"), card_name):
-                    id = entry.get("id")
-                    quantity = entry.get("quantity", 1)
+                id = entry.get("id")
+                quantity = entry.get("quantity", 1)
 
-                    if id not in grouped_items:
-                        grouped_items[id] = {
-                            "count": quantity,
-                            "name": card.get("name"),
-                            "expansion": card.get("set_name"),
-                            "scryfall_id": card.get("scryfall_id")
-                        }
-                    else:
-                        grouped_items[id]["count"] += quantity
+                if id not in grouped_items:
+                    grouped_items[id] = {
+                        "count": quantity,
+                        "name": card.get("name"),
+                        "expansion": card.get("set_name"),
+                        "scryfall_id": card.get("scryfall_id")
+                    }
+                else:
+                    grouped_items[id]["count"] += quantity
 
             return grouped_items
 
