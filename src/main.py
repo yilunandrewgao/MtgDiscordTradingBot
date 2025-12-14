@@ -90,7 +90,7 @@ async def search(ctx):
 
     card_name = ctx.message.content[ctx.message.content.find(' ') + 1:]
     if len(card_name) < 5:
-        await ctx.send("please use a longer search query")
+        await ctx.send("Please use a more specific query.")
         return
 
     active_discord_ids = [str(member.id) for member in ctx.guild.members if TRADER_ROLE in [role.name for role in member.roles]]
@@ -110,6 +110,10 @@ async def search(ctx):
         for multiverse_id in cards:
             card = cards[multiverse_id]
             full_message += f"{card['count']} copies of {card['name']} from set: {card['expansion']}.\n"
+
+    if len(full_message) > 2000:
+        await ctx.send("Too many search results. Please use a more specific query.")
+        return
 
     await ctx.send(full_message)
     
