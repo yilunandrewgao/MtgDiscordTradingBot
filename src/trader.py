@@ -71,7 +71,7 @@ class Trader:
         
     def search_moxfield(self, card_name):
 
-        file_path = f"src/moxfield/collections/{self.moxfield_id}.json"
+        file_path = f"moxfield/collections/{self.moxfield_id}.json"
 
         if not os.path.exists(file_path):
             logging.debug(f"Collection file not found: {file_path}. Fetching now...")

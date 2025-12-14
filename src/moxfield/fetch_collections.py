@@ -81,8 +81,8 @@ def fetch_collection(moxfield_id):
     full_collection['data'] = all_data
 
     # Save to JSON file
-    os.makedirs("src/moxfield/collections", exist_ok=True)
-    file_path = f"src/moxfield/collections/{moxfield_id}.json"
+    os.makedirs("moxfield/collections", exist_ok=True)
+    file_path = f"moxfield/collections/{moxfield_id}.json"
     with open(file_path, 'w') as f:
         json.dump(full_collection, f, indent=2)
 
@@ -92,7 +92,7 @@ def fetch_all_collections():
     """
     Fetch collections for all users in users.json that have moxfield_id.
     """
-    with open(f"src/{USERS_FILE}", 'r') as f:
+    with open(f"{USERS_FILE}", 'r') as f:
         users_data = json.load(f)
 
     for user in users_data.get("users", []):
