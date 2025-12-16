@@ -8,4 +8,4 @@ source venv/bin/activate
 python3 -m pip install -r requirements.txt 
 export PYTHONPATH=/home/yilungao/git/MtgDiscordTradingBot/src
 
-python3 -m src.main
+python3 -m main

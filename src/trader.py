@@ -3,7 +3,7 @@ import logging
 import json
 import os
 
-from moxfield.fetch_collections import fetch_collection
+from curl_cffi import requests as curl_requests
 
 
 handler = logging.FileHandler(filename='app.log', encoding='utf-8', mode='w')
@@ -63,44 +63,54 @@ class Trader:
         except requests.exceptions.RequestException as e:
             print(f"Error calling Echo MTG API: {e}")
             return {}
-        
-    def loose_match(self, strict_card_name, query):
 
-        return query.lower().strip() in strict_card_name.lower().strip()
-        
-        
     def search_moxfield(self, card_name):
+        url = f"https://api2.moxfield.com/v1/collections/search/{self.moxfield_id}"
 
-        file_path = f"src/moxfield/collections/{self.moxfield_id}.json"
-
-        if not os.path.exists(file_path):
-            logging.debug(f"Collection file not found: {file_path}. Fetching now...")
-            fetch_collection(self.moxfield_id)
+        params = {
+            "pageSize": 1000,
+            "q": card_name
+        }
 
         try:
-            with open(file_path, 'r') as f:
-                data = json.load(f)
+            response = curl_requests.get(
+                url,
+                headers={
+                    "User-Agent": "MtgDiscordTrading",
+                    "Host": "api2.moxfield.com",
+                },
+                params=params,
+                impersonate="chrome"
+            )
+            response.raise_for_status()  # Raises an HTTPError for bad responses
 
+            if not response.text:
+                logging.debug(f"Failed to call moxfield using collection id: {self.moxfield_id}")
+                response = {}
+            else:
+                response = response.json()
+
+            # Filter all_data
             grouped_items = {}
 
-            for entry in data.get("data", []):
+            for entry in response['data']:
                 card = entry.get("card", {})
-                if self.loose_match(card.get("name"), card_name):
-                    id = entry.get("id")
-                    quantity = entry.get("quantity", 1)
+                id = entry.get("id")
+                quantity = entry.get("quantity", 1)
 
-                    if id not in grouped_items:
-                        grouped_items[id] = {
-                            "count": quantity,
-                            "name": card.get("name"),
-                            "expansion": card.get("set_name"),
-                            "scryfall_id": card.get("scryfall_id")
-                        }
-                    else:
-                        grouped_items[id]["count"] += quantity
+                if id not in grouped_items:
+                    grouped_items[id] = {
+                        "count": quantity,
+                        "name": card.get("name"),
+                        "expansion": card.get("set_name"),
+                        "scryfall_id": card.get("scryfall_id")
+                    }
+                else:
+                    grouped_items[id]["count"] += quantity
 
             return grouped_items
 
-        except (json.JSONDecodeError, IOError) as e:
-            logging.error(f"Error reading collection file: {e}")
-            return {}
+        except requests.exceptions.RequestException as e:
+            raise Exception(f"Failed to fetch collection {self.moxfield_id}: {e}")
+        except json.JSONDecodeError as e:
+            raise Exception(f"Failed to parse JSON response for {self.moxfield_id}: {e}")

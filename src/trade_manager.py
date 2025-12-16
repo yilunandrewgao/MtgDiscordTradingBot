@@ -16,22 +16,22 @@ class TradeManager:
     def __init__(self):
 
         # Check if users.json exists, create it if not
-        if not os.path.exists(f"src/{USERS_FILE}"):
-            with open(f"src/{USERS_FILE}", "w") as f:
+        if not os.path.exists(f"{USERS_FILE}"):
+            with open(f"{USERS_FILE}", "w") as f:
                 json.dump({"users": []}, f)
 
         # Check that it is not empty and has valid format
         try:
-            with open(f"src/{USERS_FILE}", 'r') as f:
+            with open(f"{USERS_FILE}", 'r') as f:
                 if 'users' not in json.load(f):
-                    with open(f"src/{USERS_FILE}", 'w') as f:
+                    with open(f"{USERS_FILE}", 'w') as f:
                         json.dump({"users": []}, f)
         except (FileNotFoundError, json.JSONDecodeError):
-            with open(f"src/{USERS_FILE}", "w") as f:
+            with open(f"{USERS_FILE}", "w") as f:
                 json.dump({"users": []}, f)
 
         try:
-            with open(f"src/{USERS_FILE}", 'r+') as f:
+            with open(f"{USERS_FILE}", 'r+') as f:
                 for trader in json.load(f)['users']:
                     self.traders[trader["discord_id"]] = Trader(
                         discord_id = trader["discord_id"],
@@ -65,7 +65,7 @@ class TradeManager:
         current_trader = self.traders[discord_id]
         updated = False
         try:
-            with open(f"src/{USERS_FILE}", 'r') as f:
+            with open(f"{USERS_FILE}", 'r') as f:
                 all_traders = json.load(f)['users']
                 for trader in all_traders:
                     if trader["discord_id"] == discord_id:
@@ -81,7 +81,7 @@ class TradeManager:
                             "moxfield_id": current_trader.moxfield_id
                         }
                     )
-                with open(f"src/{USERS_FILE}", 'w') as f:
+                with open(f"{USERS_FILE}", 'w') as f:
                     json.dump({"users": all_traders}, f, indent=4)
         except (FileNotFoundError, json.JSONDecodeError):
             logging.error("failed to load trader info")
