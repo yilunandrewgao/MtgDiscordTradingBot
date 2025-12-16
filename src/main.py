@@ -85,10 +85,27 @@ async def link_moxfield(ctx):
     trade_manager.save_trader_info(discord_id)
     await ctx.send(f"{ctx.author.mention} has been added with moxfield collection!")
 
+def filter_trades(available_trades, collection_number):
+    # Filter trades to only include cards with matching collector number
+        filtered_trades = {}
+        for discord_id, cards in available_trades.items():
+            matching_cards = {card_id: card for card_id, card in cards.items() if str(card.get('cn', '')) == collection_number}
+            if matching_cards:
+                filtered_trades[discord_id] = matching_cards
+        return filtered_trades
+
 @bot.command()
 async def search(ctx):
 
-    card_name = ctx.message.content[ctx.message.content.find(' ') + 1:]
+    # Parse the input
+    message = ctx.message.content
+    if '[[' not in message or ']]' not in message or message.index('[[') >= message.index(']]'):
+        await ctx.send("Invalid format. Use !search [[card_name | collection_number]] or !search [[card_name]]")
+        return
+    inner = message[message.index('[['):message.index(']]')]
+    parts = inner.split('|', 1)
+    has_cn = len(parts) > 1
+    card_name = parts[0].strip()
     if len(card_name) < 5:
         await ctx.send("Please use a more specific query.")
         return
@@ -97,19 +114,25 @@ async def search(ctx):
     
     available_trades = trade_manager.search_for_card(card_name, active_discord_ids)
 
+    if has_cn:
+        collection_number = parts[1].strip()
+        available_trades = filter_trades(available_trades, collection_number)
+
     if not available_trades:
         await ctx.send("no cards found")
         return
 
+    
     full_message = ""
 
     for discord_id in available_trades:
         discord_user = bot.get_user(int(discord_id))
         full_message += f"\n{discord_user.mention} has available trades: \n"
         cards = available_trades[discord_id]
-        for multiverse_id in cards:
-            card = cards[multiverse_id]
-            full_message += f"{card['count']} copies of {card['name']} from set: {card['expansion']}.\n"
+        for card_id in cards:
+            card = cards[card_id]
+            full_message += f"{card['count']} copies of [[ {card['name']} \| #{card['cn']} \| {card['expansion']} ]] .\n"
+            found_results = True
 
     if len(full_message) > 2000:
         await ctx.send("Too many search results. Please use a more specific query.")
@@ -118,5 +141,5 @@ async def search(ctx):
     await ctx.send(full_message)
     
 
-
-bot.run(token, log_handler=handler, log_level=logging.DEBUG)
+if __name__ == "__main__":
+    bot.run(token, log_handler=handler, log_level=logging.DEBUG)

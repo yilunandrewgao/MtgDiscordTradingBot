@@ -103,7 +103,8 @@ class Trader:
                         "count": quantity,
                         "name": card.get("name"),
                         "expansion": card.get("set_name"),
-                        "scryfall_id": card.get("scryfall_id")
+                        "scryfall_id": card.get("scryfall_id"),
+                        "cn": card.get("cn")
                     }
                 else:
                     grouped_items[id]["count"] += quantity

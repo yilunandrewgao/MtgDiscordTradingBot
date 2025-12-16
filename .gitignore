@@ -1,10 +1,10 @@
 .env
 users.json
 src/moxfield/collections
+*.log
 
 venv/
-
-*.log
+__pycache__/
 
 .DS_Store
 .vscode
