@@ -110,9 +110,9 @@ async def search(ctx):
         await ctx.send("Please use a more specific query.")
         return
 
-    active_discord_ids = [str(member.id) for member in ctx.guild.members if TRADER_ROLE in [role.name for role in member.roles] if member.id != ctx.author.id]
+    discord_ids = [str(member.id) for member in ctx.guild.members if member.id != ctx.author.id]
     
-    available_trades = trade_manager.search_for_card(card_name, active_discord_ids)
+    available_trades = trade_manager.search_for_card(card_name, discord_ids)
 
     if has_cn:
         collection_number = parts[1].strip()
