@@ -35,10 +35,10 @@ async def update_collections():
 @bot.event
 async def on_ready():
 
-    ## Create MtgTrader role if it does not already exist
-    for guild in bot.guilds:
-        if TRADER_ROLE not in [role.name for role in guild.roles]:
-            await guild.create_role(name=TRADER_ROLE)
+    # ## Create MtgTrader role if it does not already exist
+    # for guild in bot.guilds:
+    #     if TRADER_ROLE not in [role.name for role in guild.roles]:
+    #         await guild.create_role(name=TRADER_ROLE)
 
     update_collections.start()
     
@@ -48,23 +48,23 @@ async def on_ready():
 async def on_member_join(member):
     await member.send(f"Welcome to the server, {member.name}")
 
-@bot.command()
-async def start_trading(ctx):
-    role = discord.utils.get(ctx.guild.roles, name=TRADER_ROLE)
-    if role:
-        await ctx.author.add_roles(role)
-        await ctx.send(f"{ctx.author.mention} is now assigned to {TRADER_ROLE}")
-    else:
-        await ctx.send(f"role does not exist")
+# @bot.command()
+# async def start_trading(ctx):
+#     role = discord.utils.get(ctx.guild.roles, name=TRADER_ROLE)
+#     if role:
+#         await ctx.author.add_roles(role)
+#         await ctx.send(f"{ctx.author.mention} is now assigned to {TRADER_ROLE}")
+#     else:
+#         await ctx.send(f"role does not exist")
 
-@bot.command()
-async def stop_trading(ctx):
-    role = discord.utils.get(ctx.guild.roles, name=TRADER_ROLE)
-    if role:
-        await ctx.author.remove_roles(role)
-        await ctx.send(f"{ctx.author.mention} is now unassigned to {TRADER_ROLE}")
-    else:
-        await ctx.send(f"role does not exist")
+# @bot.command()
+# async def stop_trading(ctx):
+#     role = discord.utils.get(ctx.guild.roles, name=TRADER_ROLE)
+#     if role:
+#         await ctx.author.remove_roles(role)
+#         await ctx.send(f"{ctx.author.mention} is now unassigned to {TRADER_ROLE}")
+#     else:
+#         await ctx.send(f"role does not exist")
 
 @bot.command()
 async def link_moxfield(ctx):
