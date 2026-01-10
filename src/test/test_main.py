@@ -1,9 +1,7 @@
 import unittest
 from unittest.mock import Mock, patch
-import sys
-import os
 
-from main import filter_trades
+from main import filter_trades, parse_search_input
 
 class TestSearchFunction(unittest.TestCase):
 
@@ -133,6 +131,17 @@ class TestSearchFunction(unittest.TestCase):
 
         # Should be empty
         self.assertEqual(filtered_trades, {})
+
+    def test_parse_search(self):
+        message = '!search {{ +2 mace }}'
+        card_name, collection_number = parse_search_input(message)
+        self.assertEqual(card_name, '+2 mace')
+        self.assertIsNone(collection_number)
+
+        message = '!search {{ Borrowing 100,000 arrows | 045 }}'
+        card_name, collection_number = parse_search_input(message)
+        self.assertEqual(card_name, 'Borrowing 100,000 arrows')
+        self.assertEqual(collection_number, '45')
 
 
 if __name__ == '__main__':

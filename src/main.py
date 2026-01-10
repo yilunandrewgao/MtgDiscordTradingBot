@@ -3,7 +3,6 @@ from discord.ext import commands, tasks
 import logging
 from dotenv import load_dotenv
 import os
-import json
 
 from trade_manager import TradeManager
 from config import MOXFIELD_REFRESH_HOURS, TRADER_ROLE, USERS_FILE
@@ -34,37 +33,12 @@ async def update_collections():
 
 @bot.event
 async def on_ready():
-
-    # ## Create MtgTrader role if it does not already exist
-    # for guild in bot.guilds:
-    #     if TRADER_ROLE not in [role.name for role in guild.roles]:
-    #         await guild.create_role(name=TRADER_ROLE)
-
-    update_collections.start()
     
     print(f"We are ready to go, {bot.user.name}")
 
 @bot.event
 async def on_member_join(member):
     await member.send(f"Welcome to the server, {member.name}")
-
-# @bot.command()
-# async def start_trading(ctx):
-#     role = discord.utils.get(ctx.guild.roles, name=TRADER_ROLE)
-#     if role:
-#         await ctx.author.add_roles(role)
-#         await ctx.send(f"{ctx.author.mention} is now assigned to {TRADER_ROLE}")
-#     else:
-#         await ctx.send(f"role does not exist")
-
-# @bot.command()
-# async def stop_trading(ctx):
-#     role = discord.utils.get(ctx.guild.roles, name=TRADER_ROLE)
-#     if role:
-#         await ctx.author.remove_roles(role)
-#         await ctx.send(f"{ctx.author.mention} is now unassigned to {TRADER_ROLE}")
-#     else:
-#         await ctx.send(f"role does not exist")
 
 @bot.command()
 async def link_moxfield(ctx):
@@ -94,28 +68,39 @@ def filter_trades(available_trades, collection_number):
                 filtered_trades[discord_id] = matching_cards
         return filtered_trades
 
+
+def parse_search_input(message):
+    """Parse the search input and return (card_name, collection_number|None).
+
+    Raises ValueError with a user-facing message when the input is invalid.
+    """
+    start = message.find('{{')
+    end = message.find('}}', start + 1)
+    if start == -1 or end == -1 or start >= end:
+        raise ValueError("Invalid format. Use !search {{card_name | collection_number}} or !search {{card_name}}")
+
+    inner = message[start + 2:end]
+    parts = inner.split('|', 1)
+    card_name = parts[0].strip(' []{}')
+    if len(card_name) < 5:
+        raise ValueError("Please use a more specific query.")
+
+    collection_number = parts[1].strip().lstrip('0') if len(parts) > 1 else None
+    return card_name, collection_number
+
 @bot.command()
 async def search(ctx):
-
-    # Parse the input
-    message = ctx.message.content
-    if '{{' not in message or '}}' not in message or message.index('{{') >= message.index('}}'):
-        await ctx.send("Invalid format. Use !search {{card_name | collection_number}} or !search {{card_name}}")
-        return
-    inner = message[message.index('{{'):message.index('}}')]
-    parts = inner.split('|', 1)
-    has_cn = len(parts) > 1
-    card_name = parts[0].strip()
-    if len(card_name) < 5:
-        await ctx.send("Please use a more specific query.")
+    try:
+        card_name, collection_number = parse_search_input(ctx.message.content)
+    except ValueError as e:
+        await ctx.send(str(e))
         return
 
     discord_ids = [str(member.id) for member in ctx.guild.members if member.id != ctx.author.id]
     
     available_trades = trade_manager.search_for_card(card_name, discord_ids)
 
-    if has_cn:
-        collection_number = parts[1].strip()
+    if collection_number:
         available_trades = filter_trades(available_trades, collection_number)
 
     if not available_trades:
