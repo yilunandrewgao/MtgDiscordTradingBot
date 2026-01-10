@@ -99,10 +99,10 @@ async def search(ctx):
 
     # Parse the input
     message = ctx.message.content
-    if '[[' not in message or ']]' not in message or message.index('[[') >= message.index(']]'):
-        await ctx.send("Invalid format. Use !search [[card_name | collection_number]] or !search [[card_name]]")
+    if '{{' not in message or '}}' not in message or message.index('{{') >= message.index('}}'):
+        await ctx.send("Invalid format. Use !search {{card_name | collection_number}} or !search {{card_name}}")
         return
-    inner = message[message.index('[['):message.index(']]')]
+    inner = message[message.index('{{'):message.index('}}')]
     parts = inner.split('|', 1)
     has_cn = len(parts) > 1
     card_name = parts[0].strip()
@@ -131,7 +131,7 @@ async def search(ctx):
         cards = available_trades[discord_id]
         for card_id in cards:
             card = cards[card_id]
-            full_message += f"{card['count']} copies of [[ {card['name']} \| #{card['cn']} \| {card['expansion']} ]] .\n"
+            full_message += f"{card['count']} copies of {{ {card['name']} \| #{card['cn']} \| {card['expansion']} }} .\n"
             found_results = True
 
     if len(full_message) > 2000:
