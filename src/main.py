@@ -124,7 +124,63 @@ async def search(ctx):
         return
 
     await ctx.send(full_message)
-    
+
+def parse_search_list_input(message):
+    start = message.find('{{')
+    end = message.find('}}', start + 1)
+    if start == -1 or end == -1 or start >= end:
+        raise ValueError("Invalid format. Use !search_list {{ card1 | card2 | card3 }}")
+
+    inner = message[start + 2:end]
+    parts = [p.strip(' []{}') for p in inner.split('|')]
+    # Ignore purely-numeric tokens (collection numbers) and empty parts
+    card_names = [p.strip() for p in parts]
+    if not card_names:
+        raise ValueError("No card names found. Use !search_list {{ card1 | card2 }}")
+    return card_names
+
+
+@bot.command()
+async def search_list(ctx):
+    try:
+        card_names = parse_search_list_input(ctx.message.content)
+    except ValueError as e:
+        await ctx.send(str(e))
+        return
+
+    discord_ids = [str(member.id) for member in ctx.guild.members if member.id != ctx.author.id]
+
+    # Aggregate results across all card names
+    aggregated = {}
+    for card_name in card_names:
+        available_trades = trade_manager.search_for_card(card_name, discord_ids)
+        for discord_id, cards in available_trades.items():
+            if discord_id not in aggregated:
+                aggregated[discord_id] = {}
+            for card_id, card in cards.items():
+                if card_id in aggregated[discord_id]:
+                    aggregated[discord_id][card_id]['count'] = aggregated[discord_id][card_id].get('count', 0) + card.get('count', 0)
+                else:
+                    aggregated[discord_id][card_id] = card.copy()
+
+    if not aggregated:
+        await ctx.send("no cards found")
+        return
+
+    full_message = ""
+    for discord_id in aggregated:
+        discord_user = bot.get_user(int(discord_id))
+        full_message += f"\n{discord_user.mention} has available trades: \n"
+        cards = aggregated[discord_id]
+        for card_id in cards:
+            card = cards[card_id]
+            full_message += f"{card.get('count', 0)} copies of {{ {card.get('name', '')} \| #{card.get('cn', '')} \| {card.get('expansion', '')} }} .\n"
+
+    if len(full_message) > 2000:
+        await ctx.send("Too many search results. Please use a more specific query.")
+        return
+
+    await ctx.send(full_message)
 
 if __name__ == "__main__":
     bot.run(token, log_handler=handler, log_level=logging.DEBUG)

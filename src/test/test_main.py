@@ -2,6 +2,7 @@ import unittest
 from unittest.mock import Mock, patch
 
 from main import filter_trades, parse_search_input
+from main import parse_search_list_input
 
 class TestSearchFunction(unittest.TestCase):
 
@@ -142,6 +143,12 @@ class TestSearchFunction(unittest.TestCase):
         card_name, collection_number = parse_search_input(message)
         self.assertEqual(card_name, 'Borrowing 100,000 arrows')
         self.assertEqual(collection_number, '45')
+
+    def test_parse_search_list_input_complex(self):
+        message = '!search_list {{ +2 mace | _____ Goblin | _____ | TL;DR }}'
+        result = parse_search_list_input(message)
+        expected = ['+2 mace', '_____ Goblin', '_____', 'TL;DR']
+        self.assertEqual(result, expected)
 
 
 if __name__ == '__main__':
