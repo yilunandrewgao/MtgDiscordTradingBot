@@ -153,7 +153,7 @@ async def search_self(ctx):
         await ctx.send(str(e))
         return
 
-    discord_ids = [ctx.author.id]
+    discord_ids = [str(ctx.author.id)]
 
     available_trades = trade_manager.search_for_card(' or '.join([f'{name}' for name in card_names]), discord_ids)
 
