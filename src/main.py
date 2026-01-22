@@ -145,5 +145,19 @@ async def search_list(ctx):
 
     await ctx.send(generate_message_from_trades(available_trades))
 
+@bot.command()
+async def search_self(ctx):
+    try:
+        card_names = parse_search_list_input(ctx.message.content)
+    except ValueError as e:
+        await ctx.send(str(e))
+        return
+
+    discord_ids = [ctx.author.id]
+
+    available_trades = trade_manager.search_for_card(' or '.join([f'{name}' for name in card_names]), discord_ids)
+
+    await ctx.send(generate_message_from_trades(available_trades))
+
 if __name__ == "__main__":
     bot.run(token, log_handler=handler, log_level=logging.DEBUG)
