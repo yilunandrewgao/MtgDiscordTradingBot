@@ -37,8 +37,7 @@ async def link_moxfield(ctx):
     # Read users.json
     if discord_id not in trade_manager.traders:
         trade_manager.add_trader(
-            discord_id=discord_id, 
-            echomtg_token="", 
+            discord_id=discord_id,
             moxfield_id=moxfield_id
         )
         

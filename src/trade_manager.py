@@ -35,7 +35,6 @@ class TradeManager:
                 for trader in json.load(f)['users']:
                     self.traders[trader["discord_id"]] = Trader(
                         discord_id = trader["discord_id"],
-                        echomtg_token = trader["echomtg_token"],
                         moxfield_id = trader["moxfield_id"]
                     )
         except (FileNotFoundError, json.JSONDecodeError):
@@ -50,13 +49,11 @@ class TradeManager:
     def add_trader(
         self,
         discord_id,
-        echomtg_token,
         moxfield_id
     ):
 
         new_trader = Trader(
             discord_id = discord_id,
-            echomtg_token = echomtg_token,
             moxfield_id = moxfield_id
         )
         self.traders[discord_id] = new_trader
@@ -69,7 +66,6 @@ class TradeManager:
                 all_traders = json.load(f)['users']
                 for trader in all_traders:
                     if trader["discord_id"] == discord_id:
-                        trader["echomtg_token"] = current_trader.echomtg_token
                         trader["moxfield_id"] = current_trader.moxfield_id
                         updated = True
                 
@@ -77,7 +73,6 @@ class TradeManager:
                     all_traders.append(
                         {
                             "discord_id": current_trader.discord_id,
-                            "echomtg_token": current_trader.echomtg_token,
                             "moxfield_id": current_trader.moxfield_id
                         }
                     )

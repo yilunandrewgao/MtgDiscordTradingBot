@@ -2,12 +2,10 @@
     "users": [
         { 
             "discord_id": "123",
-            "echomtg_token": "echomtg_abc",
             "moxfield_id": "moxfield_abc"
         },
         {
             "discord_id": "1234",
-            "echomtg_token": "echomtg_abcd",
             "moxfield_id": "moxfield_abcd"
         }
     ]
