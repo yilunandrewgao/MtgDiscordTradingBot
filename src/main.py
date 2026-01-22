@@ -1,5 +1,5 @@
 import discord
-from discord.ext import commands, tasks
+from discord.ext import commands
 import logging
 from dotenv import load_dotenv
 import os
@@ -7,7 +7,6 @@ import os
 from trade_manager import TradeManager
 from config import MOXFIELD_REFRESH_HOURS, TRADER_ROLE, USERS_FILE
 from trader import Trader
-from moxfield.fetch_collections import fetch_all_collections
 
 load_dotenv()
 token = os.getenv('DISCORD_TOKEN')
@@ -20,16 +19,6 @@ intents.members = True
 trade_manager = TradeManager()
 
 bot = commands.Bot(command_prefix='!', intents=intents)
-
-@tasks.loop(hours=MOXFIELD_REFRESH_HOURS)
-async def update_collections():
-    """Update all moxfield collections on an interval, skipping when bot starts"""
-    if update_collections.current_loop != 0:
-        try:
-            fetch_all_collections()
-            print("Successfully updated all collections")
-        except Exception as e:
-            print(f"Failed to update collections: {e}")
 
 @bot.event
 async def on_ready():
@@ -88,6 +77,25 @@ def parse_search_input(message):
     collection_number = parts[1].strip().lstrip('0') if len(parts) > 1 else None
     return card_name, collection_number
 
+
+def generate_message_from_trades(available_trades):
+
+    full_message = ""
+
+    for discord_id in available_trades:
+        discord_user = bot.get_user(int(discord_id))
+        full_message += f"\n{discord_user.mention} has available trades: \n"
+        cards = available_trades[discord_id]
+        for card_id in cards:
+            card = cards[card_id]
+            full_message += f"{card['count']} copies of {{ {card['name']} \| #{card['cn']} \| {card['expansion']} }} .\n"
+
+            
+    if len(full_message) > 2000:
+        return "Too many search results. Please use a more specific query."
+    return full_message
+
+
 @bot.command()
 async def search(ctx):
     try:
@@ -107,23 +115,7 @@ async def search(ctx):
         await ctx.send("no cards found")
         return
 
-    
-    full_message = ""
-
-    for discord_id in available_trades:
-        discord_user = bot.get_user(int(discord_id))
-        full_message += f"\n{discord_user.mention} has available trades: \n"
-        cards = available_trades[discord_id]
-        for card_id in cards:
-            card = cards[card_id]
-            full_message += f"{card['count']} copies of {{ {card['name']} \| #{card['cn']} \| {card['expansion']} }} .\n"
-            found_results = True
-
-    if len(full_message) > 2000:
-        await ctx.send("Too many search results. Please use a more specific query.")
-        return
-
-    await ctx.send(full_message)
+    await ctx.send(generate_message_from_trades(available_trades))
 
 def parse_search_list_input(message):
     start = message.find('{{')
@@ -150,37 +142,9 @@ async def search_list(ctx):
 
     discord_ids = [str(member.id) for member in ctx.guild.members if member.id != ctx.author.id]
 
-    # Aggregate results across all card names
-    aggregated = {}
-    for card_name in card_names:
-        available_trades = trade_manager.search_for_card(card_name, discord_ids)
-        for discord_id, cards in available_trades.items():
-            if discord_id not in aggregated:
-                aggregated[discord_id] = {}
-            for card_id, card in cards.items():
-                if card_id in aggregated[discord_id]:
-                    aggregated[discord_id][card_id]['count'] = aggregated[discord_id][card_id].get('count', 0) + card.get('count', 0)
-                else:
-                    aggregated[discord_id][card_id] = card.copy()
+    available_trades = trade_manager.search_for_card(' or '.join([f'{name}' for name in card_names]), discord_ids)
 
-    if not aggregated:
-        await ctx.send("no cards found")
-        return
-
-    full_message = ""
-    for discord_id in aggregated:
-        discord_user = bot.get_user(int(discord_id))
-        full_message += f"\n{discord_user.mention} has available trades: \n"
-        cards = aggregated[discord_id]
-        for card_id in cards:
-            card = cards[card_id]
-            full_message += f"{card.get('count', 0)} copies of {{ {card.get('name', '')} \| #{card.get('cn', '')} \| {card.get('expansion', '')} }} .\n"
-
-    if len(full_message) > 2000:
-        await ctx.send("Too many search results. Please use a more specific query.")
-        return
-
-    await ctx.send(full_message)
+    await ctx.send(generate_message_from_trades(available_trades))
 
 if __name__ == "__main__":
     bot.run(token, log_handler=handler, log_level=logging.DEBUG)
