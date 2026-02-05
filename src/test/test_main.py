@@ -1,7 +1,7 @@
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock
 
-from main import filter_trades, parse_search_input
+from main import extract_moxfield_id, filter_trades, parse_search_input
 from main import parse_search_list_input
 
 class TestSearchFunction(unittest.TestCase):
@@ -149,6 +149,27 @@ class TestSearchFunction(unittest.TestCase):
         result = parse_search_list_input(message)
         expected = ['+2 mace', '_____ Goblin', '_____', 'TL;DR']
         self.assertEqual(result, expected)
+
+    def test_extract_moxfield_id(self):
+        messages = [
+            '!link_moxfield https://www.moxfield.com/collection/Tn1Ta-3HsEKtpGYrJG_d6Q/',
+            '!link_moxfield https://www.moxfield.com/collection/Tn1Ta-3HsEKtpGYrJG_d6Q',
+            '!link_moxfield moxfield.com/collection/Tn1Ta-3HsEKtpGYrJG_d6Q',
+            '!link_moxfield Tn1Ta-3HsEKtpGYrJG_d6Q',
+            '!link_moxfield abcd1234',
+        ]
+        
+        # Create mock context objects with message.content
+        ctxs = []
+        for message in messages:
+            ctx = MagicMock()
+            ctx.message.content = message
+            ctxs.append(ctx)
+
+        for (i, ctx) in enumerate(ctxs[:-1]):
+            assert extract_moxfield_id(ctxs[i]) == 'Tn1Ta-3HsEKtpGYrJG_d6Q', f"Failed on message: {ctxs[i].message.content}"
+        moxfield_id = extract_moxfield_id(ctxs[-1])
+        assert not moxfield_id
 
 
 if __name__ == '__main__':

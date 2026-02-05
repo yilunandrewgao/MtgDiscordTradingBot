@@ -3,10 +3,11 @@ from discord.ext import commands
 import logging
 from dotenv import load_dotenv
 import os
+import re
 
 from trade_manager import TradeManager
 from config import MOXFIELD_REFRESH_HOURS, TRADER_ROLE, USERS_FILE
-from trader import Trader
+from trader import call_moxfield_api
 
 load_dotenv()
 token = os.getenv('DISCORD_TOKEN')
@@ -29,9 +30,32 @@ async def on_ready():
 async def on_member_join(member):
     await member.send(f"Welcome to the server, {member.name}")
 
+def extract_moxfield_id(ctx):
+    pattern = r'(?:collection/)?([A-Za-z0-9_-]+)\/?$'
+    
+    match = re.search(pattern, ctx.message.content)
+    if match:
+        collection_id = match.group(1)
+        # Validate collection_id
+        try:
+            response = call_moxfield_api(moxfield_id=collection_id)
+        except Exception:
+            return None
+        # If we get a valid response with data, the collection is valid
+        if response and response.get('data'):
+            return collection_id
+        else:
+            return None
+
+    return None
+
 @bot.command()
 async def link_moxfield(ctx):
-    moxfield_id = ctx.message.content[ctx.message.content.find(' ') + 1:]
+    moxfield_id = extract_moxfield_id(ctx)
+    if not moxfield_id:
+        await ctx.send(f"Invalid moxfield collection link or ID.")
+        return
+    
     discord_id = str(ctx.author.id)
     
     # Read users.json
@@ -45,7 +69,7 @@ async def link_moxfield(ctx):
         trade_manager.get_trader(discord_id).moxfield_id = moxfield_id
 
     trade_manager.save_trader_info(discord_id)
-    await ctx.send(f"{ctx.author.mention} has been added with moxfield collection!")
+    await ctx.send(f"{ctx.author.mention} has been added with moxfield collection id: {moxfield_id}")
 
 def filter_trades(available_trades, collection_number):
     # Filter trades to only include cards with matching collector number
