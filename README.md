@@ -7,8 +7,8 @@ You can get a discord access token to host your own bot, or you can install the 
 ## Instructions
 1) Click share on Moxfield collection
 2) Set Moxfield collection to public
-3) Use !link_moxfield <collection-id>
-4) Use !search to search other people's collections
+3) Use !link_moxfield <collection-id> to link your collection
+4) Use !search to search for a single card in other people's collections
 5) Use !search_list to search for a list of cards
 6) Use !search_self to search your own collection
 
