@@ -138,6 +138,15 @@ def generate_message_from_trades(available_trades: AvailableTrades, max_message_
             continue
         lines.append(f"{discord_user.mention} has available trades: \n")
         cards = available_trades[discord_id]
+        
+        # Check if adding user header would exceed limit
+        if current_message and len(current_message) + len(user_header) > 2000:
+            messages.append(current_message)
+            current_message = user_header
+        else:
+            current_message += user_header
+        
+        # Add each card
         for card_id in cards:
             card = cards[card_id]
             lines.append(f"{card['count']} copies of {{ {card['name']} \\| #{card['cn']} \\| {card['expansion']} }} .\n")
@@ -219,3 +228,5 @@ async def search_self(ctx, *, content=''):
 
 if __name__ == "__main__":
     bot.run(token, log_handler=handler, log_level=logging.DEBUG)
+
+        
