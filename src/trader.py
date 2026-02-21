@@ -1,41 +1,11 @@
-import requests
 import logging
-import json
-
-from curl_cffi import requests as curl_requests
+from moxfield_api import call_moxfield_collection_api
 
 
 handler = logging.FileHandler(filename='app.log', encoding='utf-8', mode='w')
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 logger.addHandler(handler)
-
-def call_moxfield_api(moxfield_id, params=None):
-
-    url = f"https://api2.moxfield.com/v1/collections/search/{moxfield_id}"
-
-    try:
-        response = curl_requests.get(
-            url,
-            headers={
-                "User-Agent": "MtgDiscordTrading",
-                "Host": "api2.moxfield.com",
-            },
-            params=params,
-            impersonate="chrome"
-        )
-        response.raise_for_status()  # Raises an HTTPError for bad responses
-
-        if not response.text:
-            logging.debug(f"Failed to call moxfield using collection id: {moxfield_id}")
-            return {}
-        else:
-            return response.json()
-
-    except requests.exceptions.RequestException as e:
-        raise Exception(f"Failed to fetch collection {moxfield_id}: {e}")
-    except json.JSONDecodeError as e:
-        raise Exception(f"Failed to parse JSON response for {moxfield_id}: {e}")
 
 class Trader:
     
@@ -55,7 +25,7 @@ class Trader:
             "q": card_name
         }
 
-        response = call_moxfield_api(moxfield_id=self.moxfield_id, params=params)
+        response = call_moxfield_collection_api(moxfield_id=self.moxfield_id, params=params)
 
         session_id = response.get("searchSessionId", None)
 
@@ -74,7 +44,7 @@ class Trader:
             "searchSessionId": session_id
         }
 
-        response = call_moxfield_api(moxfield_id=self.moxfield_id, params=params)
+        response = call_moxfield_collection_api(moxfield_id=self.moxfield_id, params=params)
 
         # Filter all_data
         grouped_items = {}

@@ -7,7 +7,7 @@ import re
 
 from trade_manager import TradeManager
 from config import MOXFIELD_REFRESH_HOURS, TRADER_ROLE, USERS_FILE
-from trader import call_moxfield_api
+from moxfield_api import call_moxfield_collection_api, call_moxfield_deck_api
 
 load_dotenv()
 token = os.getenv('DISCORD_TOKEN')
@@ -38,12 +38,29 @@ def extract_moxfield_id(ctx):
         collection_id = match.group(1)
         # Validate collection_id
         try:
-            response = call_moxfield_api(moxfield_id=collection_id)
+            response = call_moxfield_collection_api(moxfield_id=collection_id)
         except Exception:
             return None
         # If we get a valid response with data, the collection is valid
         if response and response.get('data'):
             return collection_id
+        else:
+            return None
+
+    return None
+
+def extract_deck_id(ctx):
+    pattern = r'(?:decks/)?([A-Za-z0-9_-]+)\/?$'
+
+    match = re.search(pattern, ctx.message.content)
+    if match:
+        deck_id = match.group(1)
+        try:
+            response = call_moxfield_deck_api(deck_id=deck_id)
+        except Exception:
+            return None
+        if response:
+            return deck_id
         else:
             return None
 
@@ -102,21 +119,36 @@ def parse_search_input(message):
 
 
 def generate_message_from_trades(available_trades):
-
-    full_message = ""
+    messages = []
+    current_message = ""
 
     for discord_id in available_trades:
         discord_user = bot.get_user(int(discord_id))
-        full_message += f"\n{discord_user.mention} has available trades: \n"
+        user_header = f"\n{discord_user.mention} has available trades: \n"
         cards = available_trades[discord_id]
+        
+        # Check if adding user header would exceed limit
+        if current_message and len(current_message) + len(user_header) > 2000:
+            messages.append(current_message)
+            current_message = user_header
+        else:
+            current_message += user_header
+        
+        # Add each card
         for card_id in cards:
             card = cards[card_id]
-            full_message += f"{card['count']} copies of {{ {card['name']} \| #{card['cn']} \| {card['expansion']} }} .\n"
-
+            card_line = f"{card['count']} copies of {{ {card['name']} \| #{card['cn']} \| {card['expansion']} }} .\n"
             
-    if len(full_message) > 2000:
-        return "Too many search results. Please use a more specific query."
-    return full_message
+            if len(current_message) + len(card_line) > 2000:
+                messages.append(current_message)
+                current_message = card_line
+            else:
+                current_message += card_line
+    
+    if current_message:
+        messages.append(current_message)
+    
+    return messages
 
 
 @bot.command()
@@ -138,7 +170,9 @@ async def search(ctx):
         await ctx.send("no cards found")
         return
 
-    await ctx.send(generate_message_from_trades(available_trades))
+    messages = generate_message_from_trades(available_trades)
+    for message in messages:
+        await ctx.send(message)
 
 def parse_search_list_input(message):
     start = message.find('{{')
@@ -167,7 +201,9 @@ async def search_list(ctx):
 
     available_trades = trade_manager.search_for_card(' or '.join([f'{name}' for name in card_names]), discord_ids)
 
-    await ctx.send(generate_message_from_trades(available_trades))
+    messages = generate_message_from_trades(available_trades)
+    for message in messages:
+        await ctx.send(message)
 
 @bot.command()
 async def search_self(ctx):
@@ -181,7 +217,38 @@ async def search_self(ctx):
 
     available_trades = trade_manager.search_for_card(' or '.join([f'{name}' for name in card_names]), discord_ids)
 
-    await ctx.send(generate_message_from_trades(available_trades))
+    messages = generate_message_from_trades(available_trades)
+    for message in messages:
+        await ctx.send(message)
+
+@bot.command()
+async def search_deck(ctx):
+    deck_id = extract_deck_id(ctx)
+    if not deck_id:
+        await ctx.send(f"Invalid moxfield deck link or ID.")
+        return
+    
+    response = call_moxfield_deck_api(deck_id=deck_id)
+    if response:
+        cards_in_main_and_side = response.get('boards').get('mainboard').get('cards') | \
+            response.get('boards').get('sideboard').get('cards')    
+        
+        unique_cards = set()
+        for entry in cards_in_main_and_side.values():
+            card_name = entry.get('card').get('name')
+            unique_cards.add(card_name)
+
+        unique_cards = unique_cards.difference({'Plains', 'Island', 'Swamp', 'Mountain', 'Forest'})
+
+    discord_ids = [str(member.id) for member in ctx.guild.members if member.id != ctx.author.id]
+
+    available_trades = trade_manager.search_for_card(' or '.join([f'{name}' for name in unique_cards]), discord_ids)
+
+    messages = generate_message_from_trades(available_trades)
+    for message in messages:
+        await ctx.send(message)
 
 if __name__ == "__main__":
     bot.run(token, log_handler=handler, log_level=logging.DEBUG)
+
+        
