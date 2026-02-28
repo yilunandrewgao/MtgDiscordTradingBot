@@ -81,6 +81,20 @@ class TradeManager:
         except (FileNotFoundError, json.JSONDecodeError):
             logging.error("failed to load trader info")
 
+    def remove_trader(self, discord_id):
+        if discord_id not in self.traders:
+            return False
+        del self.traders[discord_id]
+        try:
+            with open(f"{USERS_FILE}", 'r') as f:
+                all_traders = json.load(f)['users']
+            all_traders = [t for t in all_traders if t["discord_id"] != discord_id]
+            with open(f"{USERS_FILE}", 'w') as f:
+                json.dump({"users": all_traders}, f, indent=4)
+        except (FileNotFoundError, json.JSONDecodeError):
+            logging.error("failed to save trader info after removal")
+        return True
+
     def search_for_card(self, card_name, active_discord_ids):
         available_trades = {}
         for trader_id in self.traders:

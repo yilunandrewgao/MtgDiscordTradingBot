@@ -71,6 +71,15 @@ async def link_moxfield(ctx):
     trade_manager.save_trader_info(discord_id)
     await ctx.send(f"{ctx.author.mention} has been added with moxfield collection id: {moxfield_id}")
 
+@bot.command()
+async def unlink_moxfield(ctx):
+    discord_id = str(ctx.author.id)
+    removed = trade_manager.remove_trader(discord_id)
+    if removed:
+        await ctx.send(f"{ctx.author.mention} has been unlinked from their moxfield collection.")
+    else:
+        await ctx.send(f"{ctx.author.mention} has no linked moxfield collection.")
+
 def filter_trades(available_trades, collection_number):
     # Filter trades to only include cards with matching collector number
         filtered_trades = {}
