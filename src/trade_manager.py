@@ -35,7 +35,8 @@ class TradeManager:
                 for trader in json.load(f)['users']:
                     self.traders[trader["discord_id"]] = Trader(
                         discord_id = trader["discord_id"],
-                        moxfield_id = trader["moxfield_id"]
+                        moxfield_id = trader["moxfield_id"],
+                        moxfield_type = trader.get("moxfield_type", "collection")
                     )
         except (FileNotFoundError, json.JSONDecodeError):
             logging.error("failed to load trader info")
@@ -49,12 +50,14 @@ class TradeManager:
     def add_trader(
         self,
         discord_id,
-        moxfield_id
+        moxfield_id,
+        moxfield_type="collection"
     ):
 
         new_trader = Trader(
             discord_id = discord_id,
-            moxfield_id = moxfield_id
+            moxfield_id = moxfield_id,
+            moxfield_type = moxfield_type
         )
         self.traders[discord_id] = new_trader
 
@@ -67,13 +70,15 @@ class TradeManager:
                 for trader in all_traders:
                     if trader["discord_id"] == discord_id:
                         trader["moxfield_id"] = current_trader.moxfield_id
+                        trader["moxfield_type"] = current_trader.moxfield_type
                         updated = True
-                
+
                 if updated == False:
                     all_traders.append(
                         {
                             "discord_id": current_trader.discord_id,
-                            "moxfield_id": current_trader.moxfield_id
+                            "moxfield_id": current_trader.moxfield_id,
+                            "moxfield_type": current_trader.moxfield_type
                         }
                     )
                 with open(f"{USERS_FILE}", 'w') as f:

@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import MagicMock
 
-from main import extract_moxfield_id, filter_trades, parse_search_input
+from main import extract_moxfield_info, filter_trades, parse_search_input
 from main import parse_search_list_input
 
 class TestSearchFunction(unittest.TestCase):
@@ -150,7 +150,7 @@ class TestSearchFunction(unittest.TestCase):
         expected = ['+2 mace', '_____ Goblin', '_____', 'TL;DR']
         self.assertEqual(result, expected)
 
-    def test_extract_moxfield_id(self):
+    def test_extract_moxfield_info_collection(self):
         messages = [
             '!link_moxfield https://www.moxfield.com/collection/Tn1Ta-3HsEKtpGYrJG_d6Q/',
             '!link_moxfield https://www.moxfield.com/collection/Tn1Ta-3HsEKtpGYrJG_d6Q',
@@ -158,18 +158,30 @@ class TestSearchFunction(unittest.TestCase):
             '!link_moxfield Tn1Ta-3HsEKtpGYrJG_d6Q',
             '!link_moxfield abcd1234',
         ]
-        
-        # Create mock context objects with message.content
+
         ctxs = []
         for message in messages:
             ctx = MagicMock()
             ctx.message.content = message
             ctxs.append(ctx)
 
-        for (i, ctx) in enumerate(ctxs[:-1]):
-            assert extract_moxfield_id(ctxs[i]) == 'Tn1Ta-3HsEKtpGYrJG_d6Q', f"Failed on message: {ctxs[i].message.content}"
-        moxfield_id = extract_moxfield_id(ctxs[-1])
-        assert not moxfield_id
+        for ctx in ctxs[:-1]:
+            result = extract_moxfield_info(ctx)
+            assert result == ('Tn1Ta-3HsEKtpGYrJG_d6Q', 'collection'), f"Failed on message: {ctx.message.content}"
+        assert not extract_moxfield_info(ctxs[-1])
+
+    def test_extract_moxfield_info_binder(self):
+        messages = [
+            '!link_moxfield https://moxfield.com/binders/6fs4Mh8xUEScfzKmh0av6Q',
+            '!link_moxfield https://moxfield.com/binders/6fs4Mh8xUEScfzKmh0av6Q/',
+            '!link_moxfield moxfield.com/binders/6fs4Mh8xUEScfzKmh0av6Q',
+        ]
+
+        for message in messages:
+            ctx = MagicMock()
+            ctx.message.content = message
+            result = extract_moxfield_info(ctx)
+            assert result == ('6fs4Mh8xUEScfzKmh0av6Q', 'binder'), f"Failed on message: {message}"
 
 
 if __name__ == '__main__':

@@ -10,9 +10,12 @@ logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 logger.addHandler(handler)
 
-def call_moxfield_api(moxfield_id, params=None):
+def call_moxfield_api(moxfield_id, moxfield_type="collection", params=None):
 
-    url = f"https://api2.moxfield.com/v1/collections/search/{moxfield_id}"
+    if moxfield_type == "binder":
+        url = f"https://api2.moxfield.com/v1/trade-binders/{moxfield_id}/search"
+    else:
+        url = f"https://api2.moxfield.com/v1/collections/search/{moxfield_id}"
 
     try:
         response = curl_requests.get(
@@ -42,10 +45,12 @@ class Trader:
     def __init__(
         self,
         discord_id,
-        moxfield_id
+        moxfield_id,
+        moxfield_type="collection"
     ):
         self.discord_id = discord_id
         self.moxfield_id = moxfield_id
+        self.moxfield_type = moxfield_type
 
     
     def get_moxfield_session_id(self, card_name):
@@ -55,7 +60,7 @@ class Trader:
             "q": card_name
         }
 
-        response = call_moxfield_api(moxfield_id=self.moxfield_id, params=params)
+        response = call_moxfield_api(moxfield_id=self.moxfield_id, moxfield_type=self.moxfield_type, params=params)
 
         session_id = response.get("searchSessionId", None)
 
@@ -74,7 +79,7 @@ class Trader:
             "searchSessionId": session_id
         }
 
-        response = call_moxfield_api(moxfield_id=self.moxfield_id, params=params)
+        response = call_moxfield_api(moxfield_id=self.moxfield_id, moxfield_type=self.moxfield_type, params=params)
 
         # Filter all_data
         grouped_items = {}
