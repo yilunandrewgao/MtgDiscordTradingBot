@@ -103,6 +103,9 @@ def parse_search_input(message):
 
 def generate_message_from_trades(available_trades):
 
+    if not available_trades:
+        return "no cards found"
+
     full_message = ""
 
     for discord_id in available_trades:
@@ -133,10 +136,6 @@ async def search(ctx):
 
     if collection_number:
         available_trades = filter_trades(available_trades, collection_number)
-
-    if not available_trades:
-        await ctx.send("no cards found")
-        return
 
     await ctx.send(generate_message_from_trades(available_trades))
 
