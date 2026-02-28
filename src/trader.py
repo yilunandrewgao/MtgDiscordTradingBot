@@ -1,6 +1,7 @@
 import requests
 import logging
 import json
+from typing import Literal, NotRequired, TypedDict
 
 from curl_cffi import requests as curl_requests
 
@@ -10,7 +11,14 @@ logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 logger.addHandler(handler)
 
-def call_moxfield_api(moxfield_id, moxfield_type="collection", params=None):
+MoxfieldType = Literal["collection", "binder"]
+
+class TraderData(TypedDict):
+    discord_id: str
+    moxfield_id: str
+    moxfield_type: NotRequired[MoxfieldType]
+
+def call_moxfield_api(moxfield_id: str, moxfield_type: MoxfieldType = "collection", params=None):
 
     if moxfield_type == "binder":
         url = f"https://api2.moxfield.com/v1/trade-binders/{moxfield_id}/search"
@@ -44,13 +52,13 @@ class Trader:
     
     def __init__(
         self,
-        discord_id,
-        moxfield_id,
-        moxfield_type="collection"
+        discord_id: str,
+        moxfield_id: str,
+        moxfield_type: MoxfieldType = "collection"
     ):
-        self.discord_id = discord_id
-        self.moxfield_id = moxfield_id
-        self.moxfield_type = moxfield_type
+        self.discord_id: str = discord_id
+        self.moxfield_id: str = moxfield_id
+        self.moxfield_type: MoxfieldType = moxfield_type
 
     
     def get_moxfield_session_id(self, card_name):

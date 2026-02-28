@@ -1,7 +1,8 @@
 import json
 import logging
 import os
-from trader import Trader
+from typing import cast
+from trader import Trader, TraderData, MoxfieldType
 from config import USERS_FILE
 
 handler = logging.FileHandler(filename='app.log', encoding='utf-8', mode='w')
@@ -33,11 +34,12 @@ class TradeManager:
         try:
             with open(f"{USERS_FILE}", 'r+') as f:
                 for trader in json.load(f)['users']:
-                    self.traders[trader["discord_id"]] = Trader(
-                        discord_id = trader["discord_id"],
-                        moxfield_id = trader["moxfield_id"],
-                        moxfield_type = trader.get("moxfield_type", "collection")
-                    )
+                    trader_data = TraderData({
+                        "discord_id": trader["discord_id"],
+                        "moxfield_id": trader["moxfield_id"],
+                        "moxfield_type": cast(MoxfieldType, trader.get("moxfield_type", "collection")),
+                    })
+                    self.traders[trader_data["discord_id"]] = Trader(**trader_data)
         except (FileNotFoundError, json.JSONDecodeError):
             logging.error("failed to load trader info")
 
@@ -49,9 +51,9 @@ class TradeManager:
     
     def add_trader(
         self,
-        discord_id,
-        moxfield_id,
-        moxfield_type="collection"
+        discord_id: str,
+        moxfield_id: str,
+        moxfield_type: MoxfieldType = "collection"
     ):
 
         new_trader = Trader(
