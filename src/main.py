@@ -30,46 +30,56 @@ async def on_ready():
 async def on_member_join(member):
     await member.send(f"Welcome to the server, {member.name}")
 
-def extract_moxfield_id(ctx):
-    pattern = r'(?:collection/)?([A-Za-z0-9_-]+)\/?$'
-    
-    match = re.search(pattern, ctx.message.content)
-    if match:
-        collection_id = match.group(1)
-        # Validate collection_id
+def extract_moxfield_info(ctx):
+    content = ctx.message.content
+
+    binder_match = re.search(r'binders?/([A-Za-z0-9_-]+)', content)
+    if binder_match:
+        binder_id = binder_match.group(1)
+        try:
+            response = call_moxfield_api(moxfield_id=binder_id, moxfield_type="binder")
+        except Exception:
+            return None
+        if response and response.get('tradeBinder'):
+            return binder_id, "binder"
+        return None
+
+    collection_match = re.search(r'(?:collection/)?([A-Za-z0-9_-]+)\/?$', content)
+    if collection_match:
+        collection_id = collection_match.group(1)
         try:
             response = call_moxfield_api(moxfield_id=collection_id)
         except Exception:
             return None
-        # If we get a valid response with data, the collection is valid
         if response and response.get('data'):
-            return collection_id
-        else:
-            return None
+            return collection_id, "collection"
+        return None
 
     return None
 
 @bot.command()
 async def link_moxfield(ctx):
-    moxfield_id = extract_moxfield_id(ctx)
-    if not moxfield_id:
-        await ctx.send(f"Invalid moxfield collection link or ID.")
+    result = extract_moxfield_info(ctx)
+    if not result:
+        await ctx.send(f"Invalid moxfield collection or binder link or ID.")
         return
-    
+
+    moxfield_id, moxfield_type = result
     discord_id = str(ctx.author.id)
-    
-    # Read users.json
+
     if discord_id not in trade_manager.traders:
         trade_manager.add_trader(
             discord_id=discord_id,
-            moxfield_id=moxfield_id
+            moxfield_id=moxfield_id,
+            moxfield_type=moxfield_type
         )
-        
     else:
-        trade_manager.get_trader(discord_id).moxfield_id = moxfield_id
+        trader = trade_manager.get_trader(discord_id)
+        trader.moxfield_id = moxfield_id
+        trader.moxfield_type = moxfield_type
 
     trade_manager.save_trader_info(discord_id)
-    await ctx.send(f"{ctx.author.mention} has been added with moxfield collection id: {moxfield_id}")
+    await ctx.send(f"{ctx.author.mention} has been added with moxfield {moxfield_type} id: {moxfield_id}")
 
 @bot.command()
 async def unlink_moxfield(ctx):
