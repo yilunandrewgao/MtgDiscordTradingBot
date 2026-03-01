@@ -4,12 +4,13 @@ from unittest.mock import MagicMock
 
 from main import extract_moxfield_info, filter_trades, parse_search_input
 from main import parse_search_list_input
+from trader import AvailableTrades, CardEntry
 
 class TestSearchFunction(unittest.TestCase):
 
     def setUp(self):
         """Set up test fixtures"""
-        self.example_available_trades = {
+        self.example_available_trades: dict[str, CardEntry] = {
             'yjpW2O1': {
                 'count': 4,
                 'name': 'Ponder',
@@ -33,7 +34,7 @@ class TestSearchFunction(unittest.TestCase):
             }
         }
 
-        self.second_user_trades = {
+        self.second_user_trades: dict[str, CardEntry] = {
             'bRnjVOg': {
                 'count': 1,
                 'name': 'Ponder',
@@ -57,7 +58,7 @@ class TestSearchFunction(unittest.TestCase):
             }
         }
 
-        self.full_available_trades = {
+        self.full_available_trades: AvailableTrades = {
             'user1': self.example_available_trades,
             '103193318623563776': self.second_user_trades
         }

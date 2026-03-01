@@ -4,7 +4,7 @@ import json
 import logging
 import os
 from typing import cast
-from trader import Trader, TraderData, MoxfieldType
+from trader import AvailableTrades, Trader, TraderData, MoxfieldType
 from config import USERS_FILE
 
 handler = logging.FileHandler(filename='app.log', encoding='utf-8', mode='w')
@@ -14,7 +14,7 @@ logger.addHandler(handler)
 
 class TradeManager:
 
-    traders = {}
+    traders: dict[str, Trader] = {}
 
     def __init__(self):
 
@@ -47,8 +47,8 @@ class TradeManager:
 
     def get_trader(
         self,
-        discord_id
-    ): 
+        discord_id: str
+    ) -> Trader:
         return self.traders[discord_id]
     
     def add_trader(
@@ -56,7 +56,7 @@ class TradeManager:
         discord_id: str,
         moxfield_id: str,
         moxfield_type: MoxfieldType = "collection"
-    ):
+    ) -> None:
 
         new_trader = Trader(
             discord_id = discord_id,
@@ -65,7 +65,7 @@ class TradeManager:
         )
         self.traders[discord_id] = new_trader
 
-    def save_trader_info(self, discord_id):
+    def save_trader_info(self, discord_id: str) -> None:
         current_trader = self.traders[discord_id]
         updated = False
         try:
@@ -90,7 +90,7 @@ class TradeManager:
         except (FileNotFoundError, json.JSONDecodeError):
             logging.error("failed to load trader info")
 
-    def remove_trader(self, discord_id):
+    def remove_trader(self, discord_id: str) -> bool:
         if discord_id not in self.traders:
             return False
         del self.traders[discord_id]
@@ -104,9 +104,9 @@ class TradeManager:
             logging.error("failed to save trader info after removal")
         return True
 
-    async def search_for_card(self, card_name, active_discord_ids):
+    async def search_for_card(self, card_name: str, active_discord_ids: set[str]) -> AvailableTrades:
         semaphore = asyncio.Semaphore(8)
-        available_trades = {}
+        available_trades: AvailableTrades = {}
 
         async def search_trader(session: aiohttp.ClientSession, trader_id: str):
             async with semaphore:
@@ -117,7 +117,7 @@ class TradeManager:
 
         headers = {"User-Agent": "MtgDiscordTrading"}
         async with aiohttp.ClientSession(headers=headers) as session, asyncio.TaskGroup() as group:
-            for tid in filter(lambda t: t in active_discord_ids, self.traders):
+            for tid in active_discord_ids.intersection(self.traders):
                 group.create_task(search_trader(session, tid))
 
         return available_trades

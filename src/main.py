@@ -8,10 +8,11 @@ import re
 
 from trade_manager import TradeManager
 from config import MOXFIELD_REFRESH_HOURS, TRADER_ROLE, USERS_FILE
-from trader import call_moxfield_api
+from trader import AvailableTrades, MoxfieldType, call_moxfield_api
 
 load_dotenv()
 token = os.getenv('DISCORD_TOKEN')
+assert token is not None, "DISCORD_TOKEN environment variable is not set"
 
 handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
 intents = discord.Intents.default()
@@ -25,13 +26,14 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 @bot.event
 async def on_ready():
     
+    assert bot.user is not None
     print(f"We are ready to go, {bot.user.name}")
 
 @bot.event
 async def on_member_join(member):
     await member.send(f"Welcome to the server, {member.name}")
 
-async def extract_moxfield_info(ctx):
+async def extract_moxfield_info(ctx: commands.Context) -> tuple[str, MoxfieldType] | None:
     content = ctx.message.content
     headers = {"User-Agent": "MtgDiscordTrading"}
 
@@ -93,7 +95,7 @@ async def unlink_moxfield(ctx):
     else:
         await ctx.send(f"{ctx.author.mention} has no linked moxfield collection.")
 
-def filter_trades(available_trades, collection_number):
+def filter_trades(available_trades: AvailableTrades, collection_number: str) -> AvailableTrades:
     # Filter trades to only include cards with matching collector number
         filtered_trades = {}
         for discord_id, cards in available_trades.items():
@@ -103,7 +105,7 @@ def filter_trades(available_trades, collection_number):
         return filtered_trades
 
 
-def parse_search_input(message):
+def parse_search_input(message: str) -> tuple[str, str | None]:
     """Parse the search input and return (card_name, collection_number|None).
 
     Raises ValueError with a user-facing message when the input is invalid.
@@ -123,7 +125,7 @@ def parse_search_input(message):
     return card_name, collection_number
 
 
-def generate_message_from_trades(available_trades):
+def generate_message_from_trades(available_trades: AvailableTrades) -> str:
 
     if not available_trades:
         return "no cards found"
@@ -132,11 +134,13 @@ def generate_message_from_trades(available_trades):
 
     for discord_id in available_trades:
         discord_user = bot.get_user(int(discord_id))
+        if discord_user is None:
+            continue
         full_message += f"\n{discord_user.mention} has available trades: \n"
         cards = available_trades[discord_id]
         for card_id in cards:
             card = cards[card_id]
-            full_message += f"{card['count']} copies of {{ {card['name']} \| #{card['cn']} \| {card['expansion']} }} .\n"
+            full_message += f"{card['count']} copies of {{ {card['name']} \\| #{card['cn']} \\| {card['expansion']} }} .\n"
 
             
     if len(full_message) > 2000:
@@ -152,8 +156,8 @@ async def search(ctx):
         await ctx.send(str(e))
         return
 
-    discord_ids = [str(member.id) for member in ctx.guild.members if member.id != ctx.author.id]
-    
+    discord_ids = {str(member.id) for member in ctx.guild.members if member.id != ctx.author.id}
+
     available_trades = await trade_manager.search_for_card(card_name, discord_ids)
 
     if collection_number:
@@ -161,7 +165,7 @@ async def search(ctx):
 
     await ctx.send(generate_message_from_trades(available_trades))
 
-def parse_search_list_input(message):
+def parse_search_list_input(message: str) -> list[str]:
     start = message.find('{{')
     end = message.find('}}', start + 1)
     if start == -1 or end == -1 or start >= end:
@@ -184,7 +188,7 @@ async def search_list(ctx):
         await ctx.send(str(e))
         return
 
-    discord_ids = [str(member.id) for member in ctx.guild.members if member.id != ctx.author.id]
+    discord_ids = {str(member.id) for member in ctx.guild.members if member.id != ctx.author.id}
 
     available_trades = await trade_manager.search_for_card(' or '.join([f'{name}' for name in card_names]), discord_ids)
 
@@ -198,7 +202,7 @@ async def search_self(ctx):
         await ctx.send(str(e))
         return
 
-    discord_ids = [str(ctx.author.id)]
+    discord_ids = {str(ctx.author.id)}
 
     available_trades = await trade_manager.search_for_card(' or '.join([f'{name}' for name in card_names]), discord_ids)
 

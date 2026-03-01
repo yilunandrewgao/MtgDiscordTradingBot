@@ -1,7 +1,7 @@
 import aiohttp
 import logging
 import json
-from typing import Literal, NotRequired, TypedDict
+from typing import Any, Literal, Mapping, NotRequired, TypedDict
 
 
 handler = logging.FileHandler(filename='app.log', encoding='utf-8', mode='w')
@@ -16,7 +16,16 @@ class TraderData(TypedDict):
     moxfield_id: str
     moxfield_type: NotRequired[MoxfieldType]
 
-async def call_moxfield_api(session: aiohttp.ClientSession, moxfield_id: str, moxfield_type: MoxfieldType = "collection", params=None):
+class CardEntry(TypedDict):
+    count: int
+    name: str | None
+    expansion: str | None
+    scryfall_id: str | None
+    cn: str | None
+
+AvailableTrades = Mapping[str, Mapping[str, CardEntry]]
+
+async def call_moxfield_api(session: aiohttp.ClientSession, moxfield_id: str, moxfield_type: MoxfieldType = "collection", params: dict[str, str | int] | None = None) -> dict[str, Any]:
 
     if moxfield_type == "binder":
         url = f"https://api2.moxfield.com/v1/trade-binders/{moxfield_id}/search"
@@ -50,7 +59,7 @@ class Trader:
         self.moxfield_type: MoxfieldType = moxfield_type
 
     
-    async def get_moxfield_session_id(self, session: aiohttp.ClientSession, card_name):
+    async def get_moxfield_session_id(self, session: aiohttp.ClientSession, card_name: str) -> str:
 
         params = {
             "pageSize": 1,
@@ -66,7 +75,7 @@ class Trader:
 
         return session_id
 
-    async def search_moxfield(self, session: aiohttp.ClientSession, card_name):
+    async def search_moxfield(self, session: aiohttp.ClientSession, card_name: str) -> dict[str, CardEntry]:
 
         session_id = await self.get_moxfield_session_id(session, card_name)
 
@@ -79,7 +88,7 @@ class Trader:
         response = await call_moxfield_api(session=session, moxfield_id=self.moxfield_id, moxfield_type=self.moxfield_type, params=params)
 
         # Filter all_data
-        grouped_items = {}
+        grouped_items: dict[str, CardEntry] = {}
 
         for entry in response['data']:
             card = entry.get("card", {})
