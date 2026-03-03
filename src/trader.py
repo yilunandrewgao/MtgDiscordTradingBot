@@ -1,4 +1,4 @@
-import aiohttp
+from curl_cffi.requests import AsyncSession, RequestsError
 import logging
 import json
 from typing import Any, Literal, Mapping, NotRequired, TypedDict
@@ -25,7 +25,7 @@ class CardEntry(TypedDict):
 
 AvailableTrades = Mapping[str, Mapping[str, CardEntry]]
 
-async def call_moxfield_api(session: aiohttp.ClientSession, moxfield_id: str, moxfield_type: MoxfieldType = "collection", params: dict[str, str | int] | None = None) -> dict[str, Any]:
+async def call_moxfield_api(session: AsyncSession, moxfield_id: str, moxfield_type: MoxfieldType = "collection", params: dict[str, str | int] | None = None) -> dict[str, Any]:
 
     if moxfield_type == "binder":
         url = f"https://api2.moxfield.com/v1/trade-binders/{moxfield_id}/search"
@@ -33,15 +33,14 @@ async def call_moxfield_api(session: aiohttp.ClientSession, moxfield_id: str, mo
         url = f"https://api2.moxfield.com/v1/collections/search/{moxfield_id}"
 
     try:
-        async with session.get(url, params=params) as response:
-            response.raise_for_status()
-            text = await response.text()
-            if not text:
-                logging.debug(f"Failed to call moxfield using collection id: {moxfield_id}")
-                return {}
-            return await response.json()
+        response = await session.get(url, params=params)
+        response.raise_for_status()
+        if not response.text:
+            logging.debug(f"Failed to call moxfield using collection id: {moxfield_id}")
+            return {}
+        return response.json()
 
-    except aiohttp.ClientError as e:
+    except RequestsError as e:
         raise Exception(f"Failed to fetch collection {moxfield_id}: {e}")
     except json.JSONDecodeError as e:
         raise Exception(f"Failed to parse JSON response for {moxfield_id}: {e}")
@@ -59,7 +58,7 @@ class Trader:
         self.moxfield_type: MoxfieldType = moxfield_type
 
     
-    async def get_moxfield_session_id(self, session: aiohttp.ClientSession, card_name: str) -> str:
+    async def get_moxfield_session_id(self, session: AsyncSession, card_name: str) -> str:
 
         params = {
             "pageSize": 1,
@@ -75,7 +74,7 @@ class Trader:
 
         return session_id
 
-    async def search_moxfield(self, session: aiohttp.ClientSession, card_name: str) -> dict[str, CardEntry]:
+    async def search_moxfield(self, session: AsyncSession, card_name: str) -> dict[str, CardEntry]:
 
         session_id = await self.get_moxfield_session_id(session, card_name)
 

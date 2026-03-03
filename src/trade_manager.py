@@ -1,5 +1,5 @@
 import asyncio
-import aiohttp
+from curl_cffi.requests import AsyncSession
 import json
 import logging
 import os
@@ -108,7 +108,7 @@ class TradeManager:
         semaphore = asyncio.Semaphore(8)
         available_trades: AvailableTrades = {}
 
-        async def search_trader(session: aiohttp.ClientSession, trader_id: str):
+        async def search_trader(session: AsyncSession, trader_id: str):
             async with semaphore:
                 trader = self.traders[trader_id]
                 found_cards = await trader.search_moxfield(session, card_name)
@@ -116,7 +116,7 @@ class TradeManager:
                     available_trades[trader.discord_id] = found_cards
 
         headers = {"User-Agent": "MtgDiscordTrading"}
-        async with aiohttp.ClientSession(headers=headers) as session, asyncio.TaskGroup() as group:
+        async with AsyncSession(impersonate="chrome", headers=headers) as session, asyncio.TaskGroup() as group:
             for tid in active_discord_ids.intersection(self.traders):
                 group.create_task(search_trader(session, tid))
 

@@ -1,4 +1,4 @@
-import aiohttp
+from curl_cffi.requests import AsyncSession
 import discord
 from discord.ext import commands
 import logging
@@ -37,7 +37,7 @@ async def extract_moxfield_info(ctx: commands.Context) -> tuple[str, MoxfieldTyp
     content = ctx.message.content
     headers = {"User-Agent": "MtgDiscordTrading"}
 
-    async with aiohttp.ClientSession(headers=headers) as session:
+    async with AsyncSession(impersonate="chrome", headers=headers) as session:
         binder_match = re.search(r'binders?/([A-Za-z0-9_-]+)', content)
         if binder_match:
             binder_id = binder_match.group(1)
