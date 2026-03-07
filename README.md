@@ -12,12 +12,30 @@ You can get a discord access token to host your own bot, or you can install the 
 ## Instructions
 * Click share on Moxfield collection
 * Set Moxfield collection to public
-* Use !link_moxfield <collection-id> to link your collection
+* Use `!link_moxfield <collection-id>` to link your collection
     * Can link either collections or binders
-* Use !unlink_moxfield to remove your collection
-* Use !search to search for a single card in other people's collections
-* Use !search_list to search for a list of cards
-* Use !search_self to search your own collection
+* Use `!unlink_moxfield` to remove your collection
+* Use `!search` to search for a single card in other people's collections
+* Use `!search_list` to search for a list of cards
+* Use `!search_self` to search your own collection
+
+## Searching
+
+All search commands accept **Moxfield export format** — paste lines directly from a Moxfield export without any editing:
+
+```
+!search 1 Counterspell (CMR) 632
+```
+
+```
+!search_list 1 Sol Ring
+1 Teval, Arbiter of Virtue (TDM) 373 *F*
+1 Agadeem's Awakening / Agadeem, the Undercrypt (ZNR) 90
+```
+
+Quantity, set code, collector number, and foil finish (`*F*` / `*E*`) are all parsed automatically. When a collector number is included, `!search` filters results to that exact printing.
+
+The legacy `{{ card name | collector_number }}` format is still supported for single-card queries typed by hand.
 
 <img width="2183" height="905" alt="image" src="https://github.com/user-attachments/assets/2c2da1b1-a37e-4f77-a733-a0880b7c36e0" />
 

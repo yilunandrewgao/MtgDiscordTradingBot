@@ -136,21 +136,49 @@ class TestSearchFunction(unittest.TestCase):
         self.assertEqual(filtered_trades, {})
 
     def test_parse_search(self):
-        message = '!search {{ +2 mace }}'
-        card_name, collection_number = parse_search_input(message)
+        card_name, collection_number = parse_search_input('{{ +2 mace }}')
         self.assertEqual(card_name, '+2 mace')
         self.assertIsNone(collection_number)
 
-        message = '!search {{ Borrowing 100,000 arrows | 045 }}'
-        card_name, collection_number = parse_search_input(message)
+        card_name, collection_number = parse_search_input('{{ Borrowing 100,000 arrows | 045 }}')
         self.assertEqual(card_name, 'Borrowing 100,000 arrows')
         self.assertEqual(collection_number, '45')
 
+    def test_parse_search_moxfield_format(self):
+        card_name, collection_number = parse_search_input('1 Counterspell (CMR) 632')
+        self.assertEqual(card_name, 'Counterspell')
+        self.assertEqual(collection_number, '632')
+
+    def test_parse_search_moxfield_format_no_set(self):
+        card_name, collection_number = parse_search_input('1 Sol Ring')
+        self.assertEqual(card_name, 'Sol Ring')
+        self.assertIsNone(collection_number)
+
+    def test_parse_search_moxfield_leading_zeros_stripped(self):
+        card_name, collection_number = parse_search_input('1 Ponder (M11) 076')
+        self.assertEqual(card_name, 'Ponder')
+        self.assertEqual(collection_number, '76')
+
+    def test_parse_search_moxfield_multi_card_raises(self):
+        with self.assertRaises(ValueError) as ctx:
+            parse_search_input('1 Sol Ring\n2 Lightning Bolt (M11) 149')
+        self.assertIn('!search_list', str(ctx.exception))
+
+    def test_parse_search_no_args_raises(self):
+        with self.assertRaises(ValueError):
+            parse_search_input('')
+
     def test_parse_search_list_input_complex(self):
-        message = '!search_list {{ +2 mace | _____ Goblin | _____ | TL;DR }}'
-        result = parse_search_list_input(message)
-        expected = ['+2 mace', '_____ Goblin', '_____', 'TL;DR']
-        self.assertEqual(result, expected)
+        result = parse_search_list_input('{{ +2 mace | _____ Goblin | _____ | TL;DR }}')
+        self.assertEqual(result, ['+2 mace', '_____ Goblin', '_____', 'TL;DR'])
+
+    def test_parse_search_list_moxfield_format(self):
+        content = '1 Sol Ring\n2 Lightning Bolt (M11) 149\n1 Counterspell (CMR) 632'
+        self.assertEqual(parse_search_list_input(content), ['Sol Ring', 'Lightning Bolt', 'Counterspell'])
+
+    def test_parse_search_list_no_args_raises(self):
+        with self.assertRaises(ValueError):
+            parse_search_list_input('')
 
 
 @pytest.mark.parametrize("message", [

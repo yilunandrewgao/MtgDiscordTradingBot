@@ -5,10 +5,12 @@ import logging
 from dotenv import load_dotenv
 import os
 import re
+import parsy
 
 from trade_manager import TradeManager
 from config import MOXFIELD_REFRESH_HOURS, TRADER_ROLE, USERS_FILE
 from trader import AvailableTrades, MoxfieldType, call_moxfield_api
+from decklist_parser import parse_decklist
 
 load_dotenv()
 token = os.getenv('DISCORD_TOKEN')
@@ -105,17 +107,28 @@ def filter_trades(available_trades: AvailableTrades, collection_number: str) -> 
         return filtered_trades
 
 
-def parse_search_input(message: str) -> tuple[str, str | None]:
+def parse_search_input(content: str) -> tuple[str, str | None]:
     """Parse the search input and return (card_name, collection_number|None).
 
     Raises ValueError with a user-facing message when the input is invalid.
     """
-    start = message.find('{{')
-    end = message.find('}}', start + 1)
-    if start == -1 or end == -1 or start >= end:
-        raise ValueError("Invalid format. Use !search {{card_name | collection_number}} or !search {{card_name}}")
+    try:
+        cards = parse_decklist(content)
+        if len(cards) == 1:
+            card = cards[0]
+            cn = card.collector_number.lstrip('0') if card.collector_number else None
+            return card.name, cn
+        elif len(cards) > 1:
+            raise ValueError("!search only supports a single card. Use !search_list for multiple cards.")
+    except parsy.ParseError:
+        logging.debug("Decklist parse failed, falling back to legacy format", exc_info=True)
 
-    inner = message[start + 2:end]
+    start = content.find('{{')
+    end = content.find('}}', start + 1)
+    if start == -1 or end == -1 or start >= end:
+        raise ValueError("Invalid format. Paste a Moxfield export line (e.g. `1 Counterspell (CMR) 632`), or use `!search {{card_name | collector_number}}`.")
+
+    inner = content[start + 2:end]
     parts = inner.split('|', 1)
     card_name = parts[0].strip(' []{}')
     if len(card_name) < 5:
@@ -161,9 +174,9 @@ def generate_message_from_trades(available_trades: AvailableTrades, max_message_
     return generate_messages_from_lines(lines, max_message_length)
 
 @bot.command()
-async def search(ctx):
+async def search(ctx, *, content=''):
     try:
-        card_name, collection_number = parse_search_input(ctx.message.content)
+        card_name, collection_number = parse_search_input(content)
     except ValueError as e:
         await ctx.send(str(e))
         return
@@ -178,13 +191,20 @@ async def search(ctx):
     for message in generate_message_from_trades(available_trades):
         await ctx.send(message)
 
-def parse_search_list_input(message: str) -> list[str]:
-    start = message.find('{{')
-    end = message.find('}}', start + 1)
-    if start == -1 or end == -1 or start >= end:
-        raise ValueError("Invalid format. Use !search_list {{ card1 | card2 | card3 }}")
+def parse_search_list_input(content: str) -> list[str]:
+    try:
+        cards = parse_decklist(content)
+        if cards:
+            return [card.name for card in cards]
+    except Exception:
+        logging.debug("Decklist parse failed, falling back to legacy format", exc_info=True)
 
-    inner = message[start + 2:end]
+    start = content.find('{{')
+    end = content.find('}}', start + 1)
+    if start == -1 or end == -1 or start >= end:
+        raise ValueError("Invalid format. Paste a Moxfield export (one card per line), or use `!search_list {{ card1 | card2 }}`.")
+
+    inner = content[start + 2:end]
     parts = [p.strip(' []{}') for p in inner.split('|')]
     # Ignore purely-numeric tokens (collection numbers) and empty parts
     card_names = [p.strip() for p in parts]
@@ -194,9 +214,9 @@ def parse_search_list_input(message: str) -> list[str]:
 
 
 @bot.command()
-async def search_list(ctx):
+async def search_list(ctx, *, content=''):
     try:
-        card_names = parse_search_list_input(ctx.message.content)
+        card_names = parse_search_list_input(content)
     except ValueError as e:
         await ctx.send(str(e))
         return
@@ -209,9 +229,9 @@ async def search_list(ctx):
         await ctx.send(message)
 
 @bot.command()
-async def search_self(ctx):
+async def search_self(ctx, *, content=''):
     try:
-        card_names = parse_search_list_input(ctx.message.content)
+        card_names = parse_search_list_input(content)
     except ValueError as e:
         await ctx.send(str(e))
         return
