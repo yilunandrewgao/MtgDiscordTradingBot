@@ -65,14 +65,12 @@ def extract_moxfield_info(
     return None
 
 
-@bot.command()
-async def link_moxfield(ctx):
-    result = await extract_moxfield_info(ctx)
-    if not result:
-        await ctx.send(f"Invalid moxfield collection or binder link or ID.")
+async def _link_moxfield(ctx, moxfield_type: MoxfieldAsset = MoxfieldAsset.COLLECTION):
+    moxfield_id, moxfield_type = extract_moxfield_info(ctx, moxfield_type)
+    if not moxfield_id:
+        await ctx.send(f"Invalid moxfield {moxfield_type.value} link or ID.")
         return
-
-    moxfield_id, moxfield_type = result
+    
     discord_id = str(ctx.author.id)
 
     if discord_id not in trade_manager.traders:
@@ -87,7 +85,15 @@ async def link_moxfield(ctx):
         trader.moxfield_type = moxfield_type
 
     trade_manager.save_trader_info(discord_id)
-    await ctx.send(f"{ctx.author.mention} has been added with moxfield {moxfield_type} id: {moxfield_id}")
+    await ctx.send(f"{ctx.author.mention} has been added with moxfield {moxfield_type.value} id: {moxfield_id}")
+
+@bot.command()
+async def link_moxfield(ctx):
+    await _link_moxfield(ctx, MoxfieldAsset.COLLECTION)
+    
+@bot.command()
+async def link_moxfield_binder(ctx):
+    await _link_moxfield(ctx, MoxfieldAsset.BINDER)
 
 @bot.command()
 async def unlink_moxfield(ctx):

@@ -74,7 +74,7 @@ class TradeManager:
                 for trader in all_traders:
                     if trader["discord_id"] == discord_id:
                         trader["moxfield_id"] = current_trader.moxfield_id
-                        trader["moxfield_type"] = current_trader.moxfield_type
+                        trader["moxfield_type"] = current_trader.moxfield_type.value
                         updated = True
 
                 if updated == False:
@@ -82,7 +82,7 @@ class TradeManager:
                         {
                             "discord_id": current_trader.discord_id,
                             "moxfield_id": current_trader.moxfield_id,
-                            "moxfield_type": current_trader.moxfield_type
+                            "moxfield_type": current_trader.moxfield_type.value
                         }
                     )
                 with open(f"{USERS_FILE}", 'w') as f:
