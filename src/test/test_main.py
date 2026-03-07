@@ -1,9 +1,9 @@
+import asyncio
 import pytest
 import unittest
 from unittest.mock import MagicMock
 
-from main import extract_moxfield_info, filter_trades, parse_search_input
-from main import parse_search_list_input
+from main import extract_moxfield_info, filter_trades, generate_messages_from_lines, parse_search_input, parse_search_list_input
 from trader import AvailableTrades, CardEntry
 
 class TestSearchFunction(unittest.TestCase):
@@ -162,13 +162,15 @@ class TestSearchFunction(unittest.TestCase):
 def test_extract_moxfield_info_collection(message):
     ctx = MagicMock()
     ctx.message.content = message
-    assert extract_moxfield_info(ctx) == ('Tn1Ta-3HsEKtpGYrJG_d6Q', 'collection')
+    result = asyncio.run(extract_moxfield_info(ctx))
+    assert result == ('Tn1Ta-3HsEKtpGYrJG_d6Q', 'collection')
 
 
 def test_extract_moxfield_info_collection_invalid():
     ctx = MagicMock()
     ctx.message.content = '!link_moxfield abcd1234'
-    assert not extract_moxfield_info(ctx)
+    result = asyncio.run(extract_moxfield_info(ctx))
+    assert not result
 
 
 @pytest.mark.parametrize("message", [
@@ -179,8 +181,42 @@ def test_extract_moxfield_info_collection_invalid():
 def test_extract_moxfield_info_binder(message):
     ctx = MagicMock()
     ctx.message.content = message
-    assert extract_moxfield_info(ctx) == ('6fs4Mh8xUEScfzKmh0av6Q', 'binder')
+    result = asyncio.run(extract_moxfield_info(ctx))
+    assert result == ('6fs4Mh8xUEScfzKmh0av6Q', 'binder')
 
+@pytest.mark.parametrize(
+    ('lines', 'messages'),
+    [
+        (
+            [
+                'alice has available trades\n',
+                '4 copies of arcane denial\n',
+                '4 copies of absorb\n',
+                '4 copies of annul\n',
+            ],
+            [
+                'alice has available trades\n',
+                '4 copies of arcane denial\n4 copies of absorb\n',
+                '4 copies of annul\n'
+            ]
+        ),
+        (
+            [], []
+        ),
+        (
+            [
+                'carol has available trades\n',
+                '4 copies of censor\n'
+            ],
+            [
+                'carol has available trades\n4 copies of censor\n'
+            ]
+        ),
+    ]
+)
+def test_generate_messages_from_lines(lines, messages):
+
+    assert generate_messages_from_lines(lines, max_message_length=50) == messages
 
 if __name__ == '__main__':
     unittest.main()

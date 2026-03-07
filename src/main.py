@@ -124,29 +124,41 @@ def parse_search_input(message: str) -> tuple[str, str | None]:
     collection_number = parts[1].strip().lstrip('0') if len(parts) > 1 else None
     return card_name, collection_number
 
+def generate_messages_from_lines(lines: list[str], max_message_length: int = 2000) -> list[str]:
 
-def generate_message_from_trades(available_trades: AvailableTrades) -> str:
+    messages = []
+    current_message = ""
+    for line in lines:
+        if len(current_message) + len(line) > max_message_length:
+            messages.append(current_message)
+            current_message = ""
+        current_message += line
+
+    if current_message:
+        messages.append(current_message)
+
+    return messages
+
+
+def generate_message_from_trades(available_trades: AvailableTrades, max_message_length: int = 2000) -> list[str]:
 
     if not available_trades:
-        return "no cards found"
+        return ["no cards found"]
 
-    full_message = ""
+    lines = []
 
     for discord_id in available_trades:
         discord_user = bot.get_user(int(discord_id))
         if discord_user is None:
             continue
-        full_message += f"\n{discord_user.mention} has available trades: \n"
+        lines.append(f"{discord_user.mention} has available trades: \n")
         cards = available_trades[discord_id]
         for card_id in cards:
             card = cards[card_id]
-            full_message += f"{card['count']} copies of {{ {card['name']} \\| #{card['cn']} \\| {card['expansion']} }} .\n"
+            lines.append(f"{card['count']} copies of {{ {card['name']} \\| #{card['cn']} \\| {card['expansion']} }} .\n")
 
-            
-    if len(full_message) > 2000:
-        return "Too many search results. Please use a more specific query."
-    return full_message
 
+    return generate_messages_from_lines(lines, max_message_length)
 
 @bot.command()
 async def search(ctx):
@@ -163,7 +175,8 @@ async def search(ctx):
     if collection_number:
         available_trades = filter_trades(available_trades, collection_number)
 
-    await ctx.send(generate_message_from_trades(available_trades))
+    for message in generate_message_from_trades(available_trades):
+        await ctx.send(message)
 
 def parse_search_list_input(message: str) -> list[str]:
     start = message.find('{{')
@@ -192,7 +205,8 @@ async def search_list(ctx):
 
     available_trades = await trade_manager.search_for_card(' or '.join([f'{name}' for name in card_names]), discord_ids)
 
-    await ctx.send(generate_message_from_trades(available_trades))
+    for message in generate_message_from_trades(available_trades):
+        await ctx.send(message)
 
 @bot.command()
 async def search_self(ctx):
@@ -206,7 +220,8 @@ async def search_self(ctx):
 
     available_trades = await trade_manager.search_for_card(' or '.join([f'{name}' for name in card_names]), discord_ids)
 
-    await ctx.send(generate_message_from_trades(available_trades))
+    for message in generate_message_from_trades(available_trades):
+        await ctx.send(message)
 
 if __name__ == "__main__":
     bot.run(token, log_handler=handler, log_level=logging.DEBUG)
