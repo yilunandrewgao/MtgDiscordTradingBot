@@ -1,8 +1,11 @@
+from unittest.mock import MagicMock
+
 import pytest
 import unittest
 
-from main import extract_moxfield_info, filter_trades, parse_search_input
+from main import extract_moxfield_info, filter_trades, generate_messages_from_lines, parse_search_input
 from main import parse_search_list_input
+from models.moxfield_types import MoxfieldAsset
 from trader import AvailableTrades, CardEntry
 
 class TestSearchFunction(unittest.TestCase):
@@ -161,27 +164,25 @@ class TestSearchFunction(unittest.TestCase):
 def test_extract_moxfield_info_collection(message):
     ctx = MagicMock()
     ctx.message.content = message
-    result = asyncio.run(extract_moxfield_info(ctx))
-    assert result == ('Tn1Ta-3HsEKtpGYrJG_d6Q', 'collection')
+    assert extract_moxfield_info(ctx) == ('Tn1Ta-3HsEKtpGYrJG_d6Q', MoxfieldAsset.COLLECTION)
 
 
 def test_extract_moxfield_info_collection_invalid():
     ctx = MagicMock()
     ctx.message.content = '!link_moxfield abcd1234'
-    result = asyncio.run(extract_moxfield_info(ctx))
-    assert not result
+    assert not extract_moxfield_info(ctx)
 
 
 @pytest.mark.parametrize("message", [
     '!link_moxfield https://moxfield.com/binders/6fs4Mh8xUEScfzKmh0av6Q',
     '!link_moxfield https://moxfield.com/binders/6fs4Mh8xUEScfzKmh0av6Q/',
     '!link_moxfield moxfield.com/binders/6fs4Mh8xUEScfzKmh0av6Q',
+    '6fs4Mh8xUEScfzKmh0av6Q'
 ])
 def test_extract_moxfield_info_binder(message):
     ctx = MagicMock()
     ctx.message.content = message
-    result = asyncio.run(extract_moxfield_info(ctx))
-    assert result == ('6fs4Mh8xUEScfzKmh0av6Q', 'binder')
+    assert extract_moxfield_info(ctx, MoxfieldAsset.BINDER) == ('6fs4Mh8xUEScfzKmh0av6Q', MoxfieldAsset.BINDER)
 
 @pytest.mark.parametrize(
     ('lines', 'messages'),
