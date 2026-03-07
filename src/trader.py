@@ -147,4 +147,3 @@ class Trader:
 
         return grouped_items
 
-
