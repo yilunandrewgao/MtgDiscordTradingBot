@@ -1,11 +1,11 @@
 import asyncio
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 import unittest
 
 from main import filter_trades, generate_messages_from_lines, parse_search_input
-from main import parse_search_list_input, link_moxfield
+from main import parse_search_list_input, link_moxfield, search
 from models.moxfield_types import MoxfieldAsset
 from trader import AvailableTrades, CardEntry
 
@@ -169,6 +169,52 @@ class TestSearchFunction(unittest.TestCase):
     def test_parse_search_list_no_args_raises(self):
         with self.assertRaises(ValueError):
             parse_search_list_input('')
+
+
+class TestSearchCommand(unittest.TestCase):
+
+    def setUp(self):
+        self.all_trades: AvailableTrades = {
+            '123456789': {
+                'abc': {'count': 1, 'name': 'Ponder', 'expansion': 'Lorwyn', 'scryfall_id': 'aaa', 'cn': '79'},
+                'def': {'count': 2, 'name': 'Ponder', 'expansion': 'Magic 2011', 'scryfall_id': 'bbb', 'cn': '76'},
+            }
+        }
+
+    def test_search_filters_by_collector_number(self):
+        """!search with a collector number should filter to that exact printing."""
+        ctx = MagicMock()
+        ctx.message.content = '!search 1 Ponder (LRW) 79'
+        ctx.author.id = 999
+        ctx.guild.members = []
+        ctx.send = AsyncMock()
+
+        with patch('main.trade_manager') as mock_tm, patch('main.bot') as mock_bot:
+            mock_tm.search_for_card = AsyncMock(return_value=self.all_trades)
+            mock_bot.get_user.return_value = MagicMock(mention='@user1')
+
+            asyncio.run(search(ctx, content='1 Ponder (LRW) 79'))
+
+        sent = ''.join(call.args[0] for call in ctx.send.call_args_list)
+        self.assertIn('79', sent)
+        self.assertNotIn('76', sent)
+
+    def test_search_without_collector_number_returns_all_printings(self):
+        """!search without a collector number should return all printings."""
+        ctx = MagicMock()
+        ctx.author.id = 999
+        ctx.guild.members = []
+        ctx.send = AsyncMock()
+
+        with patch('main.trade_manager') as mock_tm, patch('main.bot') as mock_bot:
+            mock_tm.search_for_card = AsyncMock(return_value=self.all_trades)
+            mock_bot.get_user.return_value = MagicMock(mention='@user1')
+
+            asyncio.run(search(ctx, content='1 Ponder'))
+
+        sent = ''.join(call.args[0] for call in ctx.send.call_args_list)
+        self.assertIn('79', sent)
+        self.assertIn('76', sent)
 
 
 @pytest.mark.parametrize(
