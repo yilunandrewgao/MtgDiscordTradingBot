@@ -42,9 +42,8 @@ def _set_info():
 
 
 @parsy.generate
-def _card():
-    yield _quantity.optional()
-    yield _space.optional()
+def _moxfield_card():
+    yield _quantity
     yield _space
     n = yield _name
     si = yield _set_info.optional()
@@ -53,14 +52,22 @@ def _card():
     return CardQuery(n, sc, cn, pr)
 
 
-# Anything that isn't a card: consume the rest of the line as None
-_skip_line = parsy.regex(r'[^\n]*').result(None)
+@parsy.generate
+def _legacy_card():
+    n = yield _name
+    si = yield _set_info.optional()
+    sc, cn = si if si else (None, None)
+    pr = yield (_space.optional() >> _foil).optional(Printing.Normal)
+    return CardQuery(n, sc, cn, pr)
 
-_line = _card | _skip_line
 
-_decklist = _line.sep_by(parsy.string('\n')).map(
-    lambda cards: [c for c in cards if c is not None]
-) << parsy.eof
+_newlines = parsy.regex(r'\n+')
+
+_moxfield_decklist = _moxfield_card.sep_by(_newlines) << parsy.eof
+
+_legacy_decklist = _legacy_card.sep_by(parsy.regex(r' *[\|\n] *')) << parsy.eof
+
+_decklist = _moxfield_decklist | _legacy_decklist
 
 
 def parse_decklist(text: str) -> list[CardQuery]:

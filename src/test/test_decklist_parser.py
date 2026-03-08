@@ -64,8 +64,9 @@ def test_blank_lines_ignored():
         CardQuery("Sol Ring"),
         CardQuery("Lightning Bolt", "M11", "149"),
     ]
-    
- def test_legacy_search():
+
+
+def test_legacy_search():
     text = "Sol Ring"
     assert parse_decklist(text) == [CardQuery("Sol Ring")]
 
