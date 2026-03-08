@@ -1,4 +1,3 @@
-from curl_cffi.requests import AsyncSession
 import discord
 from discord.ext import commands
 import logging
@@ -7,9 +6,9 @@ import os
 import re
 import parsy
 
+from models.moxfield_types import MoxfieldAsset
 from trade_manager import TradeManager
-from config import MOXFIELD_REFRESH_HOURS, TRADER_ROLE, USERS_FILE
-from trader import AvailableTrades, MoxfieldType, call_moxfield_api
+from trader import AvailableTrades, call_moxfield_api_sync
 from decklist_parser import parse_decklist
 
 load_dotenv()
@@ -25,6 +24,8 @@ trade_manager = TradeManager()
 
 bot = commands.Bot(command_prefix='!', intents=intents)
 
+logger = logging.getLogger(__name__)
+
 @bot.event
 async def on_ready():
     
@@ -35,43 +36,39 @@ async def on_ready():
 async def on_member_join(member):
     await member.send(f"Welcome to the server, {member.name}")
 
-async def extract_moxfield_info(ctx: commands.Context) -> tuple[str, MoxfieldType] | None:
+def extract_moxfield_info(
+        ctx: commands.Context,
+        moxfield_type: MoxfieldAsset = MoxfieldAsset.COLLECTION
+    ) -> tuple[str, MoxfieldAsset]:
+
     content = ctx.message.content
-    headers = {"User-Agent": "MtgDiscordTrading"}
 
-    async with AsyncSession(impersonate="chrome", headers=headers) as session:
-        binder_match = re.search(r'binders?/([A-Za-z0-9_-]+)', content)
-        if binder_match:
-            binder_id = binder_match.group(1)
-            try:
-                response = await call_moxfield_api(session, moxfield_id=binder_id, moxfield_type="binder")
-            except Exception:
-                return None
-            if response and response.get('tradeBinder'):
-                return binder_id, "binder"
-            return None
+    regexes = {
+        MoxfieldAsset.BINDER: r'binders?/([A-Za-z0-9_-]+)\/?$',
+        MoxfieldAsset.DECK: r'decks?/([A-Za-z0-9_-]+)\/?$',
+        MoxfieldAsset.COLLECTION: r'collection?/([A-Za-z0-9_-]+)\/?$'
+    }
 
-        collection_match = re.search(r'(?:collection/)?([A-Za-z0-9_-]+)\/?$', content)
-        if collection_match:
-            collection_id = collection_match.group(1)
-            try:
-                response = await call_moxfield_api(session, moxfield_id=collection_id)
-            except Exception:
-                return None
-            if response and response.get('data'):
-                return collection_id, "collection"
-            return None
+    match = re.search(regexes[moxfield_type], content)
+    if match:
+        id = match.group(1)
+        try:
+            response = call_moxfield_api_sync(moxfield_id=id, moxfield_type=moxfield_type)
+        except Exception as e:
+            logger.exception(f"Error calling moxfield API: {e}")
+            raise ValueError(f"Invalid moxfield {moxfield_type.value} ID: {id}")
+        if response:
+            return id, moxfield_type
+    raise ValueError(f"Could not extract moxfield {moxfield_type.value} ID from message")
 
-    return None
 
-@bot.command()
-async def link_moxfield(ctx):
-    result = await extract_moxfield_info(ctx)
-    if not result:
-        await ctx.send(f"Invalid moxfield collection or binder link or ID.")
+async def _link_moxfield(ctx, moxfield_type: MoxfieldAsset = MoxfieldAsset.COLLECTION):
+    try:
+        moxfield_id, moxfield_type = extract_moxfield_info(ctx, moxfield_type)
+    except ValueError as e:
+        await ctx.send(str(e))
         return
 
-    moxfield_id, moxfield_type = result
     discord_id = str(ctx.author.id)
 
     if discord_id not in trade_manager.traders:
@@ -86,7 +83,15 @@ async def link_moxfield(ctx):
         trader.moxfield_type = moxfield_type
 
     trade_manager.save_trader_info(discord_id)
-    await ctx.send(f"{ctx.author.mention} has been added with moxfield {moxfield_type} id: {moxfield_id}")
+    await ctx.send(f"{ctx.author.mention} has been added with moxfield {moxfield_type.value} id: {moxfield_id}")
+
+@bot.command()
+async def link_moxfield(ctx):
+
+    if MoxfieldAsset.BINDER.value in ctx.message.content:
+        await _link_moxfield(ctx, MoxfieldAsset.BINDER)
+    else:
+        await _link_moxfield(ctx, MoxfieldAsset.COLLECTION)
 
 @bot.command()
 async def unlink_moxfield(ctx):
