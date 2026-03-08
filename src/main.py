@@ -1,3 +1,4 @@
+import asyncio
 import discord
 from discord.ext import commands
 import logging
@@ -7,8 +8,8 @@ import re
 
 from models.moxfield_types import MoxfieldAsset
 from trade_manager import TradeManager
-from trader import AvailableTrades, call_moxfield_api_sync
-from decklist_parser import CardQuery, parse_decklist
+from trader import AvailableTrades, CardEntry, call_moxfield_api_sync
+from decklist_parser import CardQuery, Printing, parse_decklist
 
 load_dotenv()
 token = os.getenv('DISCORD_TOKEN')
@@ -144,6 +145,31 @@ def generate_message_from_trades(available_trades: AvailableTrades, max_message_
 
     return generate_messages_from_lines(lines, max_message_length)
 
+_FINISH = {
+    Printing.Normal: 'nonFoil',
+    Printing.Foil: 'foil',
+    Printing.EtchedFoil: 'etched',
+}
+
+async def _exact_search(cards: list[CardQuery], discord_ids: set[str]) -> AvailableTrades:
+    partitions: dict[Printing, list[CardQuery]] = {}
+    for card in cards:
+        partitions.setdefault(card.printing, []).append(card)
+
+    tasks: list[asyncio.Task[AvailableTrades]] = []
+    async with asyncio.TaskGroup() as group:
+        for printing, partition in partitions.items():
+            query = ' or '.join(card.to_moxfield_query() for card in partition)
+            tasks.append(group.create_task(
+                trade_manager.search_for_card(query, discord_ids, finish=_FINISH[printing])
+            ))
+
+    merged: dict[str, dict[str, CardEntry]] = {}
+    for task in tasks:
+        for discord_id, found in task.result().items():
+            merged.setdefault(discord_id, {}).update(found)
+    return merged
+
 @bot.command()
 async def search(ctx, *, content=''):
     try:
@@ -170,8 +196,7 @@ async def search_exact(ctx, *, content=''):
 
     discord_ids = {str(member.id) for member in ctx.guild.members if member.id != ctx.author.id}
 
-    query = ' or '.join(card.to_moxfield_query() for card in cards)
-    available_trades = await trade_manager.search_for_card(query, discord_ids)
+    available_trades = await _exact_search(cards, discord_ids)
 
     for message in generate_message_from_trades(available_trades):
         await ctx.send(message)

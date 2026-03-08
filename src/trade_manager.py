@@ -104,14 +104,14 @@ class TradeManager:
             logging.error("failed to save trader info after removal")
         return True
 
-    async def search_for_card(self, card_name: str, active_discord_ids: set[str]) -> AvailableTrades:
+    async def search_for_card(self, card_name: str, active_discord_ids: set[str], finish: str | None = None) -> AvailableTrades:
         semaphore = asyncio.Semaphore(8)
         available_trades: AvailableTrades = {}
 
         async def search_trader(session: AsyncSession, trader_id: str):
             async with semaphore:
                 trader = self.traders[trader_id]
-                found_cards = await trader.search_moxfield(session, card_name)
+                found_cards = await trader.search_moxfield(session, card_name, finish)
                 if found_cards:
                     available_trades[trader.discord_id] = found_cards
 

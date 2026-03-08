@@ -97,7 +97,7 @@ class Trader:
     
     async def get_moxfield_session_id(self, session: AsyncSession, card_name: str) -> str:
 
-        params = {
+        params: dict[str, str | int] = {
             "pageSize": 1,
             "q": card_name
         }
@@ -111,15 +111,17 @@ class Trader:
 
         return session_id
 
-    async def search_moxfield(self, session: AsyncSession, card_name: str) -> dict[str, CardEntry]:
+    async def search_moxfield(self, session: AsyncSession, card_name: str, finish: str | None = None) -> dict[str, CardEntry]:
 
         session_id = await self.get_moxfield_session_id(session, card_name)
 
-        params = {
+        params: dict[str, str | int] = {
             "pageSize": 1000,
             "q": card_name,
             "searchSessionId": session_id
         }
+        if finish is not None:
+            params["finish"] = finish
 
         response = await call_moxfield_api(session=session, moxfield_id=self.moxfield_id, moxfield_type=self.moxfield_type, params=params)
 

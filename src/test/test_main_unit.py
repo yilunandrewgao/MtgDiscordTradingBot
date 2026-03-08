@@ -6,7 +6,7 @@ import unittest
 
 from main import generate_messages_from_lines, parse_search_input
 from main import link_moxfield, search, search_exact
-from decklist_parser import CardQuery
+from decklist_parser import CardQuery, Printing
 from models.moxfield_types import MoxfieldAsset
 
 class TestSearchFunction(unittest.TestCase):
@@ -60,15 +60,28 @@ class TestSearchCommand(unittest.TestCase):
         search_for_card = self._run_command(search, '1 Ponder\n1 Counterspell (CMR) 632')
         self.assertEqual(search_for_card.call_args.args[0], 'Ponder or Counterspell')
 
-    def test_search_exact_passes_full_query(self):
-        """!search_exact should pass the full moxfield query including set and collector number."""
+    def test_search_exact_passes_full_query_and_finish(self):
+        """!search_exact should pass the full moxfield query and nonFoil finish for normal cards."""
         search_for_card = self._run_command(search_exact, '1 Ponder (LRW) 79')
         self.assertEqual(search_for_card.call_args.args[0], '(Ponder set:LRW number:79)')
+        self.assertEqual(search_for_card.call_args.kwargs['finish'], 'nonFoil')
 
-    def test_search_exact_multiple_cards(self):
-        """!search_exact with multiple cards should join full queries with or."""
-        search_for_card = self._run_command(search_exact, '1 Ponder (LRW) 79\n1 Counterspell (CMR) 632')
-        self.assertEqual(search_for_card.call_args.args[0], '(Ponder set:LRW number:79) or (Counterspell set:CMR number:632)')
+    def test_search_exact_foil(self):
+        """!search_exact with *F* should use foil finish."""
+        search_for_card = self._run_command(search_exact, '1 Ponder (LRW) 79 *F*')
+        self.assertEqual(search_for_card.call_args.kwargs['finish'], 'foil')
+
+    def test_search_exact_etched(self):
+        """!search_exact with *E* should use etched finish."""
+        search_for_card = self._run_command(search_exact, '1 Sol Ring (SLC) 27 *E*')
+        self.assertEqual(search_for_card.call_args.kwargs['finish'], 'etched')
+
+    def test_search_exact_partitions_by_finish(self):
+        """!search_exact with mixed finishes should make one call per finish type."""
+        search_for_card = self._run_command(search_exact, '1 Ponder (LRW) 79\n1 Counterspell (CMR) 632 *F*')
+        self.assertEqual(search_for_card.call_count, 2)
+        finishes = {call.kwargs['finish'] for call in search_for_card.call_args_list}
+        self.assertEqual(finishes, {'nonFoil', 'foil'})
 
 
 @pytest.mark.parametrize(
