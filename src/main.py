@@ -44,9 +44,9 @@ def extract_moxfield_info(
     content = ctx.message.content
 
     regexes = {
-        MoxfieldAsset.BINDER: r'(?:binders?/)?([A-Za-z0-9_-]+)\/?$',
-        MoxfieldAsset.DECK: r'(?:decks/)?([A-Za-z0-9_-]+)\/?$',
-        MoxfieldAsset.COLLECTION: r'(?:collection/)?([A-Za-z0-9_-]+)\/?$'
+        MoxfieldAsset.BINDER: r'binders?/([A-Za-z0-9_-]+)\/?$',
+        MoxfieldAsset.DECK: r'decks?/([A-Za-z0-9_-]+)\/?$',
+        MoxfieldAsset.COLLECTION: r'collection?/([A-Za-z0-9_-]+)\/?$'
     }
 
     match = re.search(regexes[moxfield_type], content)
