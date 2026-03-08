@@ -12,11 +12,11 @@ You can get a discord access token to host your own bot, or you can install the 
 ## Instructions
 * Click share on Moxfield collection
 * Set Moxfield collection to public
-* Use !link_moxfield <url> to link your collection or binder
-* Use !unlink_moxfield to remove your collection
-* Use !search to search for a single card in other people's collections
-* Use !search_list to search for a list of cards
-* Use !search_self to search your own collection
+* Use `!link_moxfield <url>` to link your collection or binder
+* Use `!unlink_moxfield` to remove your collection
+* Use `!search {{ <card_name> }}` to search for a single card in other people's collections
+* Use `!search_list {{ <card_name1> | <card_name2> }}` to search for a list of cards
+* Use `!search_self {{ <card_name1> | <card_name2> }}` to search your own collection
 
 <img width="2183" height="905" alt="image" src="https://github.com/user-attachments/assets/2c2da1b1-a37e-4f77-a733-a0880b7c36e0" />
 
