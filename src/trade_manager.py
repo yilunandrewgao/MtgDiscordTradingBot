@@ -4,7 +4,7 @@ import json
 import logging
 import os
 from typing import cast
-from trader import AvailableTrades, Trader, TraderData, MoxfieldType
+from trader import AvailableTrades, Trader, TraderData, MoxfieldAsset
 from config import USERS_FILE
 
 handler = logging.FileHandler(filename='app.log', encoding='utf-8', mode='w')
@@ -39,7 +39,7 @@ class TradeManager:
                     trader_data = TraderData({
                         "discord_id": trader["discord_id"],
                         "moxfield_id": trader["moxfield_id"],
-                        "moxfield_type": cast(MoxfieldType, trader.get("moxfield_type", "collection")),
+                        "moxfield_type": MoxfieldAsset(trader.get("moxfield_type", "collection")),
                     })
                     self.traders[trader_data["discord_id"]] = Trader(**trader_data)
         except (FileNotFoundError, json.JSONDecodeError):
@@ -55,7 +55,7 @@ class TradeManager:
         self,
         discord_id: str,
         moxfield_id: str,
-        moxfield_type: MoxfieldType = "collection"
+        moxfield_type: MoxfieldAsset = MoxfieldAsset.COLLECTION
     ) -> None:
 
         new_trader = Trader(
@@ -74,7 +74,7 @@ class TradeManager:
                 for trader in all_traders:
                     if trader["discord_id"] == discord_id:
                         trader["moxfield_id"] = current_trader.moxfield_id
-                        trader["moxfield_type"] = current_trader.moxfield_type
+                        trader["moxfield_type"] = current_trader.moxfield_type.value
                         updated = True
 
                 if updated == False:
@@ -82,7 +82,7 @@ class TradeManager:
                         {
                             "discord_id": current_trader.discord_id,
                             "moxfield_id": current_trader.moxfield_id,
-                            "moxfield_type": current_trader.moxfield_type
+                            "moxfield_type": current_trader.moxfield_type.value
                         }
                     )
                 with open(f"{USERS_FILE}", 'w') as f:

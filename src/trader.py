@@ -2,7 +2,8 @@ from curl_cffi.requests import AsyncSession, RequestsError
 from curl_cffi import requests as curl_requests
 import logging
 import json
-from typing import Any, Literal, Mapping, NotRequired, TypedDict
+from typing import Any, Mapping, NotRequired, TypedDict
+from models.moxfield_types import MoxfieldAsset
 
 
 handler = logging.FileHandler(filename='app.log', encoding='utf-8', mode='w')
@@ -10,12 +11,10 @@ logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 logger.addHandler(handler)
 
-MoxfieldType = Literal["collection", "binder"]
-
 class TraderData(TypedDict):
     discord_id: str
     moxfield_id: str
-    moxfield_type: NotRequired[MoxfieldType]
+    moxfield_type: NotRequired[MoxfieldAsset]
 
 class CardEntry(TypedDict):
     count: int
@@ -28,11 +27,11 @@ AvailableTrades = Mapping[str, Mapping[str, CardEntry]]
 
 def call_moxfield_api_sync(
     moxfield_id: str,
-    moxfield_type: MoxfieldType = "collection",
+    moxfield_type: MoxfieldAsset = MoxfieldAsset.COLLECTION,
     params: dict[str, str | int] | None = None
 ) -> dict[str, Any]:
 
-    if moxfield_type == "binder":
+    if moxfield_type == MoxfieldAsset.BINDER:
         url = f"https://api2.moxfield.com/v1/trade-binders/{moxfield_id}/search"
     else:
         url = f"https://api2.moxfield.com/v1/collections/search/{moxfield_id}"
@@ -61,11 +60,11 @@ def call_moxfield_api_sync(
 async def call_moxfield_api(
     session: AsyncSession,
     moxfield_id: str,
-    moxfield_type: MoxfieldType = "collection",
+    moxfield_type: MoxfieldAsset = MoxfieldAsset.COLLECTION,
     params: dict[str, str | int] | None = None
 ) -> dict[str, Any]:
 
-    if moxfield_type == "binder":
+    if moxfield_type == MoxfieldAsset.BINDER:
         url = f"https://api2.moxfield.com/v1/trade-binders/{moxfield_id}/search"
     else:
         url = f"https://api2.moxfield.com/v1/collections/search/{moxfield_id}"
@@ -89,11 +88,11 @@ class Trader:
         self,
         discord_id: str,
         moxfield_id: str,
-        moxfield_type: MoxfieldType = "collection"
+        moxfield_type: MoxfieldAsset = MoxfieldAsset.COLLECTION
     ):
         self.discord_id: str = discord_id
         self.moxfield_id: str = moxfield_id
-        self.moxfield_type: MoxfieldType = moxfield_type
+        self.moxfield_type: MoxfieldAsset = moxfield_type
 
     
     async def get_moxfield_session_id(self, session: AsyncSession, card_name: str) -> str:
@@ -147,5 +146,4 @@ class Trader:
                 grouped_items[id]["count"] += quantity
 
         return grouped_items
-
 

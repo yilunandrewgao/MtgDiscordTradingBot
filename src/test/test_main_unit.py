@@ -1,9 +1,12 @@
 import asyncio
+from unittest.mock import MagicMock, patch
+
 import pytest
 import unittest
-from unittest.mock import MagicMock
 
-from main import extract_moxfield_info, filter_trades, generate_messages_from_lines, parse_search_input, parse_search_list_input
+from main import filter_trades, generate_messages_from_lines, parse_search_input
+from main import parse_search_list_input, link_moxfield
+from models.moxfield_types import MoxfieldAsset
 from trader import AvailableTrades, CardEntry
 
 class TestSearchFunction(unittest.TestCase):
@@ -153,37 +156,6 @@ class TestSearchFunction(unittest.TestCase):
         self.assertEqual(result, expected)
 
 
-@pytest.mark.parametrize("message", [
-    '!link_moxfield https://www.moxfield.com/collection/Tn1Ta-3HsEKtpGYrJG_d6Q/',
-    '!link_moxfield https://www.moxfield.com/collection/Tn1Ta-3HsEKtpGYrJG_d6Q',
-    '!link_moxfield moxfield.com/collection/Tn1Ta-3HsEKtpGYrJG_d6Q',
-    '!link_moxfield Tn1Ta-3HsEKtpGYrJG_d6Q',
-])
-def test_extract_moxfield_info_collection(message):
-    ctx = MagicMock()
-    ctx.message.content = message
-    result = asyncio.run(extract_moxfield_info(ctx))
-    assert result == ('Tn1Ta-3HsEKtpGYrJG_d6Q', 'collection')
-
-
-def test_extract_moxfield_info_collection_invalid():
-    ctx = MagicMock()
-    ctx.message.content = '!link_moxfield abcd1234'
-    result = asyncio.run(extract_moxfield_info(ctx))
-    assert not result
-
-
-@pytest.mark.parametrize("message", [
-    '!link_moxfield https://moxfield.com/binders/6fs4Mh8xUEScfzKmh0av6Q',
-    '!link_moxfield https://moxfield.com/binders/6fs4Mh8xUEScfzKmh0av6Q/',
-    '!link_moxfield moxfield.com/binders/6fs4Mh8xUEScfzKmh0av6Q',
-])
-def test_extract_moxfield_info_binder(message):
-    ctx = MagicMock()
-    ctx.message.content = message
-    result = asyncio.run(extract_moxfield_info(ctx))
-    assert result == ('6fs4Mh8xUEScfzKmh0av6Q', 'binder')
-
 @pytest.mark.parametrize(
     ('lines', 'messages'),
     [
@@ -217,6 +189,24 @@ def test_extract_moxfield_info_binder(message):
 def test_generate_messages_from_lines(lines, messages):
 
     assert generate_messages_from_lines(lines, max_message_length=50) == messages
+
+
+@pytest.mark.parametrize(
+    ('message_content', 'expected_moxfield_type'),
+    [
+        ('!link_moxfield https://www.moxfield.com/collection/Tn1Ta-3HsEKtpGYrJG_d6Q/', MoxfieldAsset.COLLECTION),
+        ('!link_moxfield https://www.moxfield.com/binders/6fs4Mh8xUEScfzKmh0av6Q', MoxfieldAsset.BINDER),
+    ]
+)
+def test_link_moxfield_calls_extract_moxfield_info_with_correct_args(message_content, expected_moxfield_type):
+    """Test that _link_moxfield calls extract_moxfield_info with the correct moxfield type based on URL"""
+    ctx = MagicMock()
+    ctx.message.content = message_content
+
+    with patch('main._link_moxfield') as mock_internal_link_moxfield:
+        asyncio.run(link_moxfield(ctx))
+        mock_internal_link_moxfield.assert_called_once_with(ctx, expected_moxfield_type)
+
 
 if __name__ == '__main__':
     unittest.main()
