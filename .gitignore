@@ -4,6 +4,7 @@ src/moxfield/collections
 *.log
 
 venv/
+.direnv/
 __pycache__/
 
 .DS_Store
