@@ -7,7 +7,7 @@ import os
 import re
 
 from models.moxfield_types import MoxfieldAsset
-from trade_manager import TradeManager
+from trade_manager import TradeManager, TraderNotFound
 from trader import AvailableTrades, CardEntry, call_moxfield_api_sync
 from decklist_parser import CardQuery, Printing, parse_decklist
 
@@ -70,19 +70,7 @@ async def _link_moxfield(ctx, moxfield_type: MoxfieldAsset = MoxfieldAsset.COLLE
         return
 
     discord_id = str(ctx.author.id)
-
-    if discord_id not in trade_manager.traders:
-        trade_manager.add_trader(
-            discord_id=discord_id,
-            moxfield_id=moxfield_id,
-            moxfield_type=moxfield_type
-        )
-    else:
-        trader = trade_manager.get_trader(discord_id)
-        trader.moxfield_id = moxfield_id
-        trader.moxfield_type = moxfield_type
-
-    trade_manager.save_trader_info(discord_id)
+    trade_manager.upsert_trader(discord_id, moxfield_id, moxfield_type)
     await ctx.send(f"{ctx.author.mention} has been added with moxfield {moxfield_type.value} id: {moxfield_id}")
 
 @bot.command()
@@ -103,28 +91,33 @@ async def unlink_moxfield(ctx):
         await ctx.send(f"{ctx.author.mention} has no linked moxfield collection.")
 
 @bot.command()
-async def link_wishlist(ctx):
+async def link_wishlist(ctx: commands.Context):
     discord_id = str(ctx.author.id)
 
-    if discord_id not in trade_manager.traders:
-        await ctx.send(f"{ctx.author.mention} must link a Moxfield collection first with !link_moxfield.")
-        return
     try:
         wishlist_id, _ = extract_moxfield_info(ctx, MoxfieldAsset.DECK)
+        trader = trade_manager.set_wishlist(discord_id, wishlist_id)
     except ValueError as e:
         await ctx.send(str(e))
         return
-    trade_manager.set_wishlist(discord_id, wishlist_id)
-    wishlist_url = trade_manager.get_trader(discord_id).wishlist_url
-    await ctx.send(f"{ctx.author.mention} wishlist linked: {wishlist_url}")
+    except TraderNotFound:
+        await ctx.send(f"{ctx.author.mention} must link a Moxfield collection first with !link_moxfield.")
+        return
+    await ctx.send(f"{ctx.author.mention} wishlist linked: {trader.wishlist_url}")
 
 @bot.command()
-async def unlink_wishlist(ctx):
+async def unlink_wishlist(ctx: commands.Context):
     discord_id = str(ctx.author.id)
-    if not trade_manager.remove_wishlist(discord_id):
-        await ctx.send(f"{ctx.author.mention} has no linked wishlist.")
+
+    try:
+        removed = trade_manager.remove_wishlist(discord_id)
+    except TraderNotFound:
+        await ctx.send(f"{ctx.author.mention} must link a Moxfield collection first with !link_moxfield.")
         return
-    await ctx.send(f"{ctx.author.mention} wishlist has been unlinked.")
+    if not removed:
+        await ctx.send(f"{ctx.author.mention} wishlist has been unlinked.")
+    else:
+        await ctx.send(f"{ctx.author.mention} has no linked wishlist.")
 
 def parse_search_input(content: str) -> list[CardQuery]:
     """Parse search input into a list of cards. Raises ValueError when the input is invalid."""
@@ -160,7 +153,7 @@ def generate_message_from_trades(available_trades: AvailableTrades, max_message_
         discord_user = bot.get_user(int(discord_id))
         if discord_user is None:
             continue
-        trader = trade_manager.traders.get(discord_id)
+        trader = trade_manager.get_trader(discord_id)
         wishlist_url = trader.wishlist_url if trader else None
         if wishlist_url:
             lines.append(f"{discord_user.mention} [🛍️]({wishlist_url}) has available trades: \n")

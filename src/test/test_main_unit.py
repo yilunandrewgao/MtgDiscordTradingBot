@@ -154,7 +154,7 @@ class TestGenerateMessageFromTrades(unittest.TestCase):
         mock_trader.wishlist_url = "https://moxfield.com/decks/deck_xyz"
 
         mock_tm = MagicMock()
-        mock_tm.traders = {discord_id: mock_trader}
+        mock_tm.get_trader.return_value = mock_trader
 
         with patch('main.bot') as mock_bot, patch('main.trade_manager', mock_tm):
             mock_bot.get_user.return_value = mock_user
@@ -171,7 +171,7 @@ class TestGenerateMessageFromTrades(unittest.TestCase):
         mock_trader.wishlist_url = None
 
         mock_tm = MagicMock()
-        mock_tm.traders = {discord_id: mock_trader}
+        mock_tm.get_trader.return_value = mock_trader
 
         with patch('main.bot') as mock_bot, patch('main.trade_manager', mock_tm):
             mock_bot.get_user.return_value = mock_user

@@ -11,11 +11,17 @@ logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 logger.addHandler(handler)
 
+
+class TraderNotFound(Exception):
+    ...
+
+
 class TradeManager:
 
-    traders: dict[str, Trader] = {}
+    _traders: dict[str, Trader]
 
     def __init__(self):
+        self._traders = {}
 
         # Check if users.json exists, create it if not
         if not os.path.exists(f"{USERS_FILE}"):
@@ -41,32 +47,33 @@ class TradeManager:
                         "moxfield_type": MoxfieldAsset(trader.get("moxfield_type", "collection")),
                         "wishlist_id": trader.get("wishlist_id"),
                     })
-                    self.traders[trader_data["discord_id"]] = Trader(**trader_data)
+                    self._traders[trader_data["discord_id"]] = Trader(**trader_data)
         except (FileNotFoundError, json.JSONDecodeError):
             logging.error("failed to load trader info")
 
-    def get_trader(
-        self,
-        discord_id: str
-    ) -> Trader:
-        return self.traders[discord_id]
-    
-    def add_trader(
+    def get_trader(self, discord_id: str) -> Trader | None:
+        return self._traders.get(discord_id)
+
+    def upsert_trader(
         self,
         discord_id: str,
         moxfield_id: str,
         moxfield_type: MoxfieldAsset = MoxfieldAsset.COLLECTION
     ) -> None:
-
-        new_trader = Trader(
-            discord_id = discord_id,
-            moxfield_id = moxfield_id,
-            moxfield_type = moxfield_type
-        )
-        self.traders[discord_id] = new_trader
+        if discord_id in self._traders:
+            trader = self._traders[discord_id]
+            trader.moxfield_id = moxfield_id
+            trader.moxfield_type = moxfield_type
+        else:
+            self._traders[discord_id] = Trader(
+                discord_id=discord_id,
+                moxfield_id=moxfield_id,
+                moxfield_type=moxfield_type,
+            )
+        self.save_trader_info(discord_id)
 
     def save_trader_info(self, discord_id: str) -> None:
-        current_trader = self.traders[discord_id]
+        current_trader = self._traders[discord_id]
         updated = False
         try:
             with open(f"{USERS_FILE}", 'r') as f:
@@ -94,22 +101,26 @@ class TradeManager:
         except (FileNotFoundError, json.JSONDecodeError):
             logging.error("failed to load trader info")
 
-    def set_wishlist(self, discord_id: str, wishlist_id: str | None) -> bool:
-        if discord_id not in self.traders:
+    def set_wishlist(self, discord_id: str, wishlist_id: str | None) -> Trader:
+        if discord_id not in self._traders:
+            raise TraderNotFound(discord_id)
+        self._traders[discord_id].wishlist_id = wishlist_id
+        self.save_trader_info(discord_id)
+        return self._traders[discord_id]
+
+    def remove_wishlist(self, discord_id: str) -> bool:
+        if discord_id not in self._traders:
+            raise TraderNotFound(discord_id)
+        if self._traders[discord_id].wishlist_id is None:
             return False
-        self.traders[discord_id].wishlist_id = wishlist_id
+        self._traders[discord_id].wishlist_id = None
         self.save_trader_info(discord_id)
         return True
 
-    def remove_wishlist(self, discord_id: str) -> bool:
-        if discord_id not in self.traders or self.traders[discord_id].wishlist_id is None:
-            return False
-        return self.set_wishlist(discord_id, None)
-
     def remove_trader(self, discord_id: str) -> bool:
-        if discord_id not in self.traders:
+        if discord_id not in self._traders:
             return False
-        del self.traders[discord_id]
+        del self._traders[discord_id]
         try:
             with open(f"{USERS_FILE}", 'r') as f:
                 all_traders = json.load(f)['users']
@@ -126,14 +137,14 @@ class TradeManager:
 
         async def search_trader(session: AsyncSession, trader_id: str):
             async with semaphore:
-                trader = self.traders[trader_id]
+                trader = self._traders[trader_id]
                 found_cards = await trader.search_moxfield(session, card_name, finish)
                 if found_cards:
                     available_trades[trader.discord_id] = found_cards
 
         headers = {"User-Agent": "MtgDiscordTrading"}
         async with AsyncSession(impersonate="chrome", headers=headers) as session, asyncio.TaskGroup() as group:
-            for tid in active_discord_ids.intersection(self.traders):
+            for tid in active_discord_ids.intersection(self._traders):
                 group.create_task(search_trader(session, tid))
 
         return available_trades
