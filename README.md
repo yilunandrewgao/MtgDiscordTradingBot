@@ -15,19 +15,30 @@ You can [add the bot to your server][bot-invite], or host your own using the ins
 
 ## Commands
 
-| Command                | Description                              |
-|------------------------|------------------------------------------|
-| `!link_moxfield <url>` | Link your Moxfield collection or binder  |
-| `!unlink_moxfield`     | Unlink your collection                   |
-| `!search`              | Search other members' collections by name|
-| `!search_exact`        | Search for specific printings            |
-| `!search_self`         | Search your own collection               |
+| Command                  | Description                              |
+|--------------------------|------------------------------------------|
+| `!link_moxfield <url>`   | Link your Moxfield collection or binder  |
+| `!unlink_moxfield`       | Unlink your collection                   |
+| `!link_wishlist <url>`   | Link a Moxfield deck as your wishlist    |
+| `!unlink_wishlist`       | Unlink your wishlist                     |
+| `!search`                | Search other members' collections by name|
+| `!search_exact`          | Search for specific printings            |
+| `!search_self`           | Search your own collection               |
 
 To link a collection, set it to public on Moxfield (**Share → Public**), then paste the URL:
 ```
 !link_moxfield https://www.moxfield.com/collection/Tn1Ta-3HsEKtpGYrJG_d6Q
 !link_moxfield https://www.moxfield.com/binders/6fs4Mh8xUEScfzKmh0av6Q
 ```
+
+To link a wishlist, paste the share link from your Moxfield wishlist (**Share → Copy URL**):
+```
+!link_wishlist https://www.moxfield.com/decks/your-wishlist-share-id
+```
+
+You can find the share link at `https://www.moxfield.com/wishlist`.
+
+When a member has a wishlist linked, their name appears with a 🛍️ link in search results.
 
 ## Searching
 
