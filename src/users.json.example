@@ -1,8 +1,9 @@
 {
     "users": [
-        { 
+        {
             "discord_id": "123",
-            "moxfield_id": "moxfield_abc"
+            "moxfield_id": "moxfield_abc",
+            "wishlist_id": "deck_xyz"
         },
         {
             "discord_id": "1234",

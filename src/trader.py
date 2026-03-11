@@ -15,6 +15,7 @@ class TraderData(TypedDict):
     discord_id: str
     moxfield_id: str
     moxfield_type: NotRequired[MoxfieldAsset]
+    wishlist_id: NotRequired[str | None]
 
 class CardEntry(TypedDict):
     count: int
@@ -88,11 +89,19 @@ class Trader:
         self,
         discord_id: str,
         moxfield_id: str,
-        moxfield_type: MoxfieldAsset = MoxfieldAsset.COLLECTION
+        moxfield_type: MoxfieldAsset = MoxfieldAsset.COLLECTION,
+        wishlist_id: str | None = None
     ):
         self.discord_id: str = discord_id
         self.moxfield_id: str = moxfield_id
         self.moxfield_type: MoxfieldAsset = moxfield_type
+        self.wishlist_id: str | None = wishlist_id
+
+    @property
+    def wishlist_url(self) -> str | None:
+        if self.wishlist_id:
+            return f"https://moxfield.com/decks/{self.wishlist_id}"
+        return None
 
     
     async def get_moxfield_session_id(self, session: AsyncSession, card_name: str) -> str:

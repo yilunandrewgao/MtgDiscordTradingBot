@@ -3,7 +3,6 @@ from curl_cffi.requests import AsyncSession
 import json
 import logging
 import os
-from typing import cast
 from trader import AvailableTrades, Trader, TraderData, MoxfieldAsset
 from config import USERS_FILE
 
@@ -40,6 +39,7 @@ class TradeManager:
                         "discord_id": trader["discord_id"],
                         "moxfield_id": trader["moxfield_id"],
                         "moxfield_type": MoxfieldAsset(trader.get("moxfield_type", "collection")),
+                        "wishlist_id": trader.get("wishlist_id"),
                     })
                     self.traders[trader_data["discord_id"]] = Trader(**trader_data)
         except (FileNotFoundError, json.JSONDecodeError):
@@ -75,20 +75,36 @@ class TradeManager:
                     if trader["discord_id"] == discord_id:
                         trader["moxfield_id"] = current_trader.moxfield_id
                         trader["moxfield_type"] = current_trader.moxfield_type.value
+                        trader.pop("wishlist_id", None)
+                        if current_trader.wishlist_id is not None:
+                            trader["wishlist_id"] = current_trader.wishlist_id
                         updated = True
 
                 if updated == False:
-                    all_traders.append(
-                        {
-                            "discord_id": current_trader.discord_id,
-                            "moxfield_id": current_trader.moxfield_id,
-                            "moxfield_type": current_trader.moxfield_type.value
-                        }
-                    )
+                    entry: dict = {
+                        "discord_id": current_trader.discord_id,
+                        "moxfield_id": current_trader.moxfield_id,
+                        "moxfield_type": current_trader.moxfield_type.value,
+                    }
+                    if current_trader.wishlist_id is not None:
+                        entry["wishlist_id"] = current_trader.wishlist_id
+                    all_traders.append(entry)
                 with open(f"{USERS_FILE}", 'w') as f:
                     json.dump({"users": all_traders}, f, indent=4)
         except (FileNotFoundError, json.JSONDecodeError):
             logging.error("failed to load trader info")
+
+    def set_wishlist(self, discord_id: str, wishlist_id: str | None) -> bool:
+        if discord_id not in self.traders:
+            return False
+        self.traders[discord_id].wishlist_id = wishlist_id
+        self.save_trader_info(discord_id)
+        return True
+
+    def remove_wishlist(self, discord_id: str) -> bool:
+        if discord_id not in self.traders or self.traders[discord_id].wishlist_id is None:
+            return False
+        return self.set_wishlist(discord_id, None)
 
     def remove_trader(self, discord_id: str) -> bool:
         if discord_id not in self.traders:

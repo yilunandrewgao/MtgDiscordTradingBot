@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 import unittest
 
-from main import generate_messages_from_lines, parse_search_input
+from main import generate_messages_from_lines, generate_message_from_trades, parse_search_input
 from main import link_moxfield, search, search_exact
 from decklist_parser import CardQuery, Printing
 from models.moxfield_types import MoxfieldAsset
@@ -134,6 +134,51 @@ def test_link_moxfield_calls_extract_moxfield_info_with_correct_args(message_con
     with patch('main._link_moxfield') as mock_internal_link_moxfield:
         asyncio.run(link_moxfield(ctx))
         mock_internal_link_moxfield.assert_called_once_with(ctx, expected_moxfield_type)
+
+
+class TestGenerateMessageFromTrades(unittest.TestCase):
+
+    def _make_trades(self, discord_id: str) -> dict:
+        return {
+            discord_id: {
+                "entry1": {"count": 1, "name": "Counterspell", "expansion": "CMR", "scryfall_id": "abc", "cn": "632"}
+            }
+        }
+
+    def test_wishlist_url_in_header(self):
+        discord_id = "42"
+        mock_user = MagicMock()
+        mock_user.mention = "@alice"
+
+        mock_trader = MagicMock()
+        mock_trader.wishlist_url = "https://moxfield.com/decks/deck_xyz"
+
+        mock_tm = MagicMock()
+        mock_tm.traders = {discord_id: mock_trader}
+
+        with patch('main.bot') as mock_bot, patch('main.trade_manager', mock_tm):
+            mock_bot.get_user.return_value = mock_user
+            messages = generate_message_from_trades(self._make_trades(discord_id))
+
+        self.assertTrue(any("[🛍️](https://moxfield.com/decks/deck_xyz)" in m for m in messages))
+
+    def test_no_wishlist_plain_header(self):
+        discord_id = "43"
+        mock_user = MagicMock()
+        mock_user.mention = "@bob"
+
+        mock_trader = MagicMock()
+        mock_trader.wishlist_url = None
+
+        mock_tm = MagicMock()
+        mock_tm.traders = {discord_id: mock_trader}
+
+        with patch('main.bot') as mock_bot, patch('main.trade_manager', mock_tm):
+            mock_bot.get_user.return_value = mock_user
+            messages = generate_message_from_trades(self._make_trades(discord_id))
+
+        self.assertTrue(any("@bob has available trades:" in m for m in messages))
+        self.assertFalse(any("🛍️" in m for m in messages))
 
 
 if __name__ == '__main__':
