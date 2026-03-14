@@ -53,12 +53,12 @@ class TestSearchCommand(unittest.TestCase):
     def test_search_ignores_set_and_number(self):
         """!search should query by name only, ignoring set and collector number."""
         search_for_card = self._run_command(search, '1 Ponder (LRW) 79')
-        self.assertEqual(search_for_card.call_args.args[0], 'Ponder')
+        self.assertEqual(search_for_card.call_args.args[0], '"Ponder"')
 
     def test_search_multiple_cards(self):
         """!search with multiple cards should join names with or."""
         search_for_card = self._run_command(search, '1 Ponder\n1 Counterspell (CMR) 632')
-        self.assertEqual(search_for_card.call_args.args[0], 'Ponder or Counterspell')
+        self.assertEqual(search_for_card.call_args.args[0], '"Ponder" or "Counterspell"')
 
     def test_search_exact_passes_full_query_and_finish(self):
         """!search_exact should pass the full moxfield query and nonFoil finish for normal cards."""

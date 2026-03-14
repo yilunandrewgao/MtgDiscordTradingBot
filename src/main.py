@@ -180,7 +180,7 @@ async def search(ctx, *, content=''):
 
     discord_ids = {str(member.id) for member in ctx.guild.members if member.id != ctx.author.id}
 
-    query = ' or '.join(card.name for card in cards)
+    query = ' or '.join(f'"{card.name}"' for card in cards)
     available_trades = await trade_manager.search_for_card(query, discord_ids)
 
     for message in generate_message_from_trades(available_trades):
