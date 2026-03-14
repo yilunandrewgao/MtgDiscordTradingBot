@@ -3,7 +3,6 @@ from curl_cffi.requests import AsyncSession
 import json
 import logging
 import os
-from typing import cast
 from trader import AvailableTrades, Trader, TraderData, MoxfieldAsset
 from config import USERS_FILE
 

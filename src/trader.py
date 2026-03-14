@@ -1,9 +1,8 @@
-from curl_cffi.requests import AsyncSession, RequestsError
-from curl_cffi import requests as curl_requests
+from curl_cffi.requests import AsyncSession
 import logging
-import json
-from typing import Any, Mapping, NotRequired, TypedDict
+from typing import Mapping, NotRequired, TypedDict
 from models.moxfield_types import MoxfieldAsset
+from moxfield_api import call_moxfield_api
 
 
 handler = logging.FileHandler(filename='app.log', encoding='utf-8', mode='w')
@@ -24,63 +23,6 @@ class CardEntry(TypedDict):
     cn: str | None
 
 AvailableTrades = Mapping[str, Mapping[str, CardEntry]]
-
-def call_moxfield_api_sync(
-    moxfield_id: str,
-    moxfield_type: MoxfieldAsset = MoxfieldAsset.COLLECTION,
-    params: dict[str, str | int] | None = None
-) -> dict[str, Any]:
-
-    if moxfield_type == MoxfieldAsset.BINDER:
-        url = f"https://api2.moxfield.com/v1/trade-binders/{moxfield_id}/search"
-    else:
-        url = f"https://api2.moxfield.com/v1/collections/search/{moxfield_id}"
-
-    try:
-        response = curl_requests.get(
-            url,
-            headers={
-                "User-Agent": "MtgDiscordTrading",
-                "Host": "api2.moxfield.com",
-            },
-            params=params,
-            impersonate="chrome"
-        )
-        response.raise_for_status()
-        if not response.text:
-            logging.debug(f"Failed to call moxfield using collection id: {moxfield_id}")
-            return {}
-        return response.json()
-
-    except RequestsError as e:
-        raise Exception(f"Failed to fetch collection {moxfield_id}: {e}")
-    except json.JSONDecodeError as e:
-        raise Exception(f"Failed to parse JSON response for {moxfield_id}: {e}")
-
-async def call_moxfield_api(
-    session: AsyncSession,
-    moxfield_id: str,
-    moxfield_type: MoxfieldAsset = MoxfieldAsset.COLLECTION,
-    params: dict[str, str | int] | None = None
-) -> dict[str, Any]:
-
-    if moxfield_type == MoxfieldAsset.BINDER:
-        url = f"https://api2.moxfield.com/v1/trade-binders/{moxfield_id}/search"
-    else:
-        url = f"https://api2.moxfield.com/v1/collections/search/{moxfield_id}"
-
-    try:
-        response = await session.get(url, params=params)
-        response.raise_for_status()
-        if not response.text:
-            logging.debug(f"Failed to call moxfield using collection id: {moxfield_id}")
-            return {}
-        return response.json()
-
-    except RequestsError as e:
-        raise Exception(f"Failed to fetch collection {moxfield_id}: {e}")
-    except json.JSONDecodeError as e:
-        raise Exception(f"Failed to parse JSON response for {moxfield_id}: {e}")
 
 class Trader:
     
@@ -148,4 +90,3 @@ class Trader:
                 grouped_items[id]["count"] += quantity
 
         return grouped_items
-

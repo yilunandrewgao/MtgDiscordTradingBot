@@ -72,7 +72,7 @@ _decklist = _moxfield_decklist | _legacy_decklist
 
 def parse_decklist(text: str) -> list[CardQuery]:
     cleaned = "\n".join(
-        line for line in text.splitlines()
+        line.strip() for line in text.splitlines()
         if not line.strip().startswith("@")
     )
     return _decklist.parse(cleaned)

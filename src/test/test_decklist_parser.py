@@ -1,4 +1,3 @@
-import pytest
 from decklist_parser import CardQuery, Printing, parse_decklist
 
 
@@ -60,6 +59,13 @@ def test_full_discord_message():
 
 def test_blank_lines_ignored():
     text = "1 Sol Ring\n\n2 Lightning Bolt (M11) 149"
+    assert parse_decklist(text) == [
+        CardQuery("Sol Ring"),
+        CardQuery("Lightning Bolt", "M11", "149"),
+    ]
+
+def test_blank_spaces_ignored():
+    text = "    1 Sol Ring\n\n    2 Lightning Bolt (M11) 149"
     assert parse_decklist(text) == [
         CardQuery("Sol Ring"),
         CardQuery("Lightning Bolt", "M11", "149"),
