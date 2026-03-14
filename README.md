@@ -15,13 +15,15 @@ You can [add the bot to your server][bot-invite], or host your own using the ins
 
 ## Commands
 
-| Command                | Description                              |
-|------------------------|------------------------------------------|
-| `!link_moxfield <url>` | Link your Moxfield collection or binder  |
-| `!unlink_moxfield`     | Unlink your collection                   |
-| `!search`              | Search other members' collections by name|
-| `!search_exact`        | Search for specific printings            |
-| `!search_self`         | Search your own collection               |
+| Command                     | Description                              |
+|-----------------------------|------------------------------------------|
+| `!link_moxfield <url>`      | Link your Moxfield collection or binder  |
+| `!unlink_moxfield`          | Unlink your collection                   |
+| `!search`                   | Search other members' collections by name|
+| `!search_exact`             | Search for specific printings            |
+| `!search_deck <url>`        | !search for cards in deck                |
+| `!search_deck_exact <url>`  | !search_exact for cards in deck          |
+| `!search_self`              | Search your own collection               |
 
 To link a collection, set it to public on Moxfield (**Share → Public**), then paste the URL:
 ```
