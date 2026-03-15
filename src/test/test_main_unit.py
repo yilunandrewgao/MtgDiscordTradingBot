@@ -160,7 +160,7 @@ class TestGenerateMessageFromTrades(unittest.TestCase):
             mock_bot.get_user.return_value = mock_user
             messages = generate_message_from_trades(self._make_trades(discord_id))
 
-        self.assertTrue(any("[🛍️](https://moxfield.com/decks/deck_xyz)" in m for m in messages))
+        self.assertTrue(any("[WL](https://moxfield.com/decks/deck_xyz)" in m for m in messages))
 
     def test_no_wishlist_plain_header(self):
         discord_id = "43"
