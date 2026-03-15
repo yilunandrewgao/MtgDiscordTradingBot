@@ -157,7 +157,7 @@ def generate_message_from_trades(available_trades: AvailableTrades, max_message_
         trader = trade_manager.get_trader(discord_id)
         wishlist_url = trader.wishlist_url if trader else None
         if wishlist_url:
-            lines.append(f"{discord_user.mention} [🛍️]({wishlist_url}) has available trades: \n")
+            lines.append(f"{discord_user.mention} ([WL]({wishlist_url})) has available trades: \n")
         else:
             lines.append(f"{discord_user.mention} has available trades: \n")
         cards = available_trades[discord_id]
