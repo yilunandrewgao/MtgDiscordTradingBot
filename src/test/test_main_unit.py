@@ -44,11 +44,10 @@ class TestSearchCommand(unittest.TestCase):
         ctx.author.id = 999
         ctx.guild.members = []
         ctx.send = AsyncMock()
-        mock_tm = MagicMock()
-        mock_tm.search_for_card = AsyncMock(return_value={})
-        with patch('main.trade_manager', mock_tm):
+        mock_search = AsyncMock(return_value={})
+        with patch('main.trade_manager.search_for_card', mock_search):
             asyncio.run(command(ctx, content=content))
-        return mock_tm.search_for_card
+        return mock_search
 
     def test_search_ignores_set_and_number(self):
         """!search should query by name only, ignoring set and collector number."""

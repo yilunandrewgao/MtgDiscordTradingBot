@@ -1,10 +1,20 @@
 import asyncio
+from collections.abc import Sequence
 from curl_cffi.requests import AsyncSession
 import json
 import logging
 import os
-from trader import AvailableTrades, Trader, TraderData, MoxfieldAsset
+from trader import AvailableTrades, CardEntry, Trader, TraderData, MoxfieldAsset
+from decklist_parser import CardQuery, Printing
 from config import USERS_FILE
+
+_BATCH_SIZE = 50
+
+_FINISH = {
+    Printing.Normal: 'nonFoil',
+    Printing.Foil: 'foil',
+    Printing.EtchedFoil: 'etched',
+}
 
 handler = logging.FileHandler(filename='app.log', encoding='utf-8', mode='w')
 logger = logging.getLogger()
@@ -148,3 +158,35 @@ class TradeManager:
                 group.create_task(search_trader(session, tid))
 
         return available_trades
+
+    async def batched_search(self, queries: Sequence[tuple[str, str | None]], discord_ids: set[str]) -> AvailableTrades:
+        tasks: list[asyncio.Task[AvailableTrades]] = []
+        async with asyncio.TaskGroup() as group:
+            for query, finish in queries:
+                tasks.append(group.create_task(
+                    self.search_for_card(query, discord_ids, finish=finish)
+                ))
+        merged: dict[str, dict[str, CardEntry]] = {}
+        for task in tasks:
+            for discord_id, found in task.result().items():
+                merged.setdefault(discord_id, {}).update(found)
+        return merged
+
+    async def fuzzy_search(self, cards: list[CardQuery], discord_ids: set[str]) -> AvailableTrades:
+        queries = [
+            (' or '.join(f'"{card.name}"' for card in cards[i:i + _BATCH_SIZE]), None)
+            for i in range(0, len(cards), _BATCH_SIZE)
+        ]
+        return await self.batched_search(queries, discord_ids)
+
+    async def exact_search(self, cards: list[CardQuery], discord_ids: set[str]) -> AvailableTrades:
+        partitions: dict[Printing, list[CardQuery]] = {}
+        for card in cards:
+            partitions.setdefault(card.printing, []).append(card)
+
+        queries = [
+            (' or '.join(card.to_moxfield_query() for card in partition[i:i + _BATCH_SIZE]), _FINISH[printing])
+            for printing, partition in partitions.items()
+            for i in range(0, len(partition), _BATCH_SIZE)
+        ]
+        return await self.batched_search(queries, discord_ids)
