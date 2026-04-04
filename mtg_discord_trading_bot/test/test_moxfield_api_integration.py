@@ -1,5 +1,5 @@
-from decklist_parser import parse_decklist
-from moxfield_api import get_decklist_export
+from mtg_discord_trading_bot.decklist_parser import parse_decklist
+from mtg_discord_trading_bot.moxfield_api import get_decklist_export
 
 # Test deck: https://moxfield.com/decks/4Ou0PhOgX0ewm2m5g1f2Kw
 def test_get_decklist_export():

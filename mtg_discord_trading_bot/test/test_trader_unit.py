@@ -1,4 +1,4 @@
-from trader import Trader
+from mtg_discord_trading_bot.trader import Trader
 
 def test_group_cards_by_id():
     trader = Trader("123", "abc", "collection")

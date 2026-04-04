@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from trade_manager import TradeManager, TraderNotFound
+from mtg_discord_trading_bot.trade_manager import TradeManager, TraderNotFound
 
 
 def test_search_for_card_integration():

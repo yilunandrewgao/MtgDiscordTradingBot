@@ -5,11 +5,11 @@ from dotenv import load_dotenv
 import os
 import re
 
-from models.moxfield_types import MoxfieldAsset
-from trade_manager import TradeManager, TraderNotFound
-from trader import AvailableTrades
-from moxfield_api import call_moxfield_api_sync, get_decklist_export
-from decklist_parser import CardQuery, parse_decklist
+from .models.moxfield_types import MoxfieldAsset
+from .trade_manager import TradeManager, TraderNotFound
+from .trader import AvailableTrades
+from .moxfield_api import call_moxfield_api_sync, get_decklist_export
+from .decklist_parser import CardQuery, parse_decklist
 
 load_dotenv()
 token = os.getenv('DISCORD_TOKEN')
@@ -234,5 +234,8 @@ async def search_self(ctx: commands.Context, *, content: str = '') -> None:
     for message in generate_message_from_trades(available_trades):
         await ctx.send(message, suppress_embeds=True)
 
-if __name__ == "__main__":
+def main():
     bot.run(token, log_handler=handler, log_level=logging.DEBUG)
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,27 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "mtg-discord-trading-bot"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = [
+    "curl-cffi",
+    "discord.py",
+    "python-dotenv",
+    "parsy",
+]
+
+[project.scripts]
+mtg-discord-bot = "mtg_discord_trading_bot.main:main"
+
+[project.optional_dependencies]
+dev = [
+    "pytest",
+    "pyright",
+    "ruff",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]

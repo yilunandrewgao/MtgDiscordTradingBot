@@ -2,8 +2,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from main import extract_moxfield_info
-from models.moxfield_types import MoxfieldAsset
+from mtg_discord_trading_bot.main import extract_moxfield_info
+from mtg_discord_trading_bot.models.moxfield_types import MoxfieldAsset
 
 
 @pytest.mark.parametrize("message", [

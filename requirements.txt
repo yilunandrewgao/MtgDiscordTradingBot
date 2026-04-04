@@ -1,5 +1,0 @@
-curl_cffi
-discord.py
-python-dotenv
-pytest
-parsy

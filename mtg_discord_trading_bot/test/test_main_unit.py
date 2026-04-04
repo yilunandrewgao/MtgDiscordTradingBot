@@ -4,10 +4,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 import unittest
 
-from main import generate_messages_from_lines, generate_message_from_trades, parse_search_input
-from main import link_moxfield, search, search_exact
-from decklist_parser import CardQuery, Printing
-from models.moxfield_types import MoxfieldAsset
+from mtg_discord_trading_bot.main import generate_messages_from_lines, generate_message_from_trades, parse_search_input
+from mtg_discord_trading_bot.main import link_moxfield, search, search_exact
+from mtg_discord_trading_bot.decklist_parser import CardQuery, Printing
+from mtg_discord_trading_bot.models.moxfield_types import MoxfieldAsset
 
 class TestSearchFunction(unittest.TestCase):
 

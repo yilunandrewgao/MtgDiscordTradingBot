@@ -1,4 +1,4 @@
-from decklist_parser import CardQuery, Printing, parse_decklist
+from mtg_discord_trading_bot.decklist_parser import CardQuery, Printing, parse_decklist
 
 
 def test_full_card():

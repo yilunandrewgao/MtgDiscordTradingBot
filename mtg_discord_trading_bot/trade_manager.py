@@ -4,9 +4,9 @@ from curl_cffi.requests import AsyncSession
 import json
 import logging
 import os
-from trader import AvailableTrades, CardEntry, Trader, TraderData, MoxfieldAsset
-from decklist_parser import CardQuery, Printing
-from config import USERS_FILE
+from .trader import AvailableTrades, CardEntry, Trader, TraderData, MoxfieldAsset
+from .decklist_parser import CardQuery, Printing
+from .config import USERS_FILE
 
 _BATCH_SIZE = 50
 

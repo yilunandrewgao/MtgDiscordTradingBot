@@ -1,4 +1,4 @@
-from moxfield_api import MoxfieldAsset, call_moxfield_api_sync
+from mtg_discord_trading_bot.moxfield_api import MoxfieldAsset, call_moxfield_api_sync
 
 def test_call_moxfield_api_sync_returns_expected_json():
     moxfield_id = "Tn1Ta-3HsEKtpGYrJG_d6Q"

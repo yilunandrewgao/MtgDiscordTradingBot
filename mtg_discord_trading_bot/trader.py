@@ -1,8 +1,8 @@
 from curl_cffi.requests import AsyncSession
 import logging
 from typing import Mapping, NotRequired, TypedDict
-from models.moxfield_types import MoxfieldAsset
-from moxfield_api import call_moxfield_api
+from .models.moxfield_types import MoxfieldAsset
+from .moxfield_api import call_moxfield_api
 
 
 handler = logging.FileHandler(filename='app.log', encoding='utf-8', mode='w')

@@ -4,7 +4,7 @@ import json
 from curl_cffi import requests as curl_requests
 from typing import Any
 from curl_cffi.requests import AsyncSession, RequestsError
-from models.moxfield_types import MoxfieldAsset
+from .models.moxfield_types import MoxfieldAsset
 
 def get_moxfield_url(moxfield_id: str, moxfield_type: MoxfieldAsset) -> str:
     match moxfield_type:
