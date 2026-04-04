@@ -19,4 +19,4 @@ jobs:
           experimental-features = nix-command flakes
 
     - name: Check flake
-      run: nix flake check
+      run: nix flake check --print-build-logs
