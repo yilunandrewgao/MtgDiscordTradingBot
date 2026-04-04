@@ -34,7 +34,21 @@
             python-dotenv
             parsy
           ];
+
+          nativeCheckInputs = [ python.pkgs.pytestCheckHook ];
+
+          disabledTestPaths = [
+            "tests/test_main_integration.py"
+            "tests/test_moxfield_api_integration.py"
+            "tests/test_trader_integration.py"
+          ];
+
+          preCheck = ''
+            export DISCORD_TOKEN=dummy
+          '';
         };
+
+        checks.tests = self.outputs.packages.${system}.default;
       }
     )
     // {
